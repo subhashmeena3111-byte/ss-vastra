@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDFBF7"/>
+      <stop offset="100%" stop-color="#F4ECE1"/>
+    </linearGradient>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4AF37"/>
+      <stop offset="50%" stop-color="#A87A2A"/>
+      <stop offset="100%" stop-color="#7B5614"/>
+    </linearGradient>
+    <linearGradient id="pinkGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FAD0DC"/>
+      <stop offset="50%" stop-color="#E9A9BB"/>
+      <stop offset="100%" stop-color="#C86D85"/>
+    </linearGradient>
+    <filter id="shadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#553010" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <!-- Background Canvas -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+  
+  <!-- Outer Decorative Ring -->
+  <circle cx="256" cy="256" r="210" fill="none" stroke="url(#goldGrad)" stroke-width="3" stroke-dasharray="8 6" opacity="0.6"/>
+  <circle cx="256" cy="256" r="198" fill="none" stroke="url(#goldGrad)" stroke-width="1.5" opacity="0.8"/>
+
+  <!-- Flowing Pink Saree Pallu Motif Drape -->
+  <path d="M 170 340 C 190 260, 240 210, 310 170 C 350 148, 380 160, 370 200 C 358 240, 290 290, 210 350 Z" 
+        fill="url(#pinkGrad)" opacity="0.85" filter="url(#shadow)"/>
+  <path d="M 195 325 C 220 250, 280 205, 350 175" 
+        fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 215 340 C 240 270, 295 225, 360 195" 
+        fill="none" stroke="url(#goldGrad)" stroke-width="2.5" stroke-linecap="round" opacity="0.9"/>
+
+  <!-- Interlocking Royal Gold Monogram "SS" -->
+  <g filter="url(#shadow)">
+    <!-- First 'S' -->
+    <path d="M 225 180 C 205 180, 185 192, 185 212 C 185 240, 240 245, 240 275 C 240 292, 220 305, 198 305 C 182 305, 168 296, 162 288" 
+          fill="none" stroke="url(#goldGrad)" stroke-width="16" stroke-linecap="round"/>
+    
+    <!-- Second 'S' Intertwined -->
+    <path d="M 315 205 C 298 205, 278 217, 278 237 C 278 265, 332 270, 332 300 C 332 318, 310 330, 288 330 C 270 330, 255 320, 250 310" 
+          fill="none" stroke="url(#goldGrad)" stroke-width="16" stroke-linecap="round"/>
+  </g>
+
+  <!-- Brand Typography -->
+  <text x="256" y="388" font-family="'Cormorant Garamond', serif" font-size="34" font-weight="700" letter-spacing="9" fill="#2B2320" text-anchor="middle">SS VASTRA</text>
+  <text x="256" y="415" font-family="'Jost', sans-serif" font-size="13" font-weight="500" letter-spacing="5" fill="#A87A2A" text-anchor="middle">JAIPUR</text>
+</svg>

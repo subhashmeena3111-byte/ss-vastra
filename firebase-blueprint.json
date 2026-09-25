@@ -1,0 +1,92 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Fashion catalog item with details, sizes, images and pricing",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "description": "Unique URL-friendly slug" },
+        "name": { "type": "string", "description": "Product display title" },
+        "category": { "type": "string", "description": "Category name or slug" },
+        "price": { "type": "number", "description": "Discounted selling price in INR" },
+        "originalPrice": { "type": "number", "description": "Original MRP price in INR" },
+        "discountPercent": { "type": "number", "description": "Calculated discount percent" },
+        "stock": { "type": "number", "description": "Available inventory units" },
+        "image": { "type": "string", "description": "Primary high-resolution image URL" },
+        "description": { "type": "string", "description": "Fabric & style description" },
+        "fabric": { "type": "string", "description": "Fabric material composition" },
+        "color": { "type": "string", "description": "Color name" },
+        "isNewArrival": { "type": "boolean", "description": "Flag for new arrivals" },
+        "isBestSeller": { "type": "boolean", "description": "Flag for best-selling items" },
+        "isFeatured": { "type": "boolean", "description": "Flag for featured carousel items" },
+        "isActive": { "type": "boolean", "description": "Visibility flag" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" }
+      },
+      "required": ["name", "category", "price", "image"]
+    },
+    "Category": {
+      "title": "Category",
+      "description": "Product catalog classification",
+      "type": "object",
+      "properties": {
+        "slug": { "type": "string", "description": "Category URL slug" },
+        "name": { "type": "string", "description": "Category title" },
+        "icon": { "type": "string", "description": "Emoji or icon" },
+        "image": { "type": "string", "description": "Banner cover image URL" },
+        "description": { "type": "string", "description": "Category summary" },
+        "displayOrder": { "type": "number", "description": "Sorting priority" }
+      },
+      "required": ["name", "slug"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer purchase order",
+      "type": "object",
+      "properties": {
+        "orderNumber": { "type": "string", "description": "Unique human-readable order code" },
+        "customerName": { "type": "string", "description": "Customer recipient full name" },
+        "customerEmail": { "type": "string", "description": "Customer email address" },
+        "customerPhone": { "type": "string", "description": "Customer 10-digit mobile number" },
+        "shippingAddress": { "type": "string", "description": "Full street address" },
+        "totalAmount": { "type": "number", "description": "Final billing amount in INR" },
+        "paymentMethod": { "type": "string", "description": "cod, upi, or razorpay" },
+        "paymentStatus": { "type": "string", "description": "pending, paid, failed" },
+        "orderStatus": { "type": "string", "description": "Placed, Confirmed, Shipped, Delivered, Cancelled" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Order placement timestamp" }
+      },
+      "required": ["orderNumber", "customerName", "customerPhone", "shippingAddress", "totalAmount"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Store configuration and contact details",
+      "type": "object",
+      "properties": {
+        "store_name": { "type": "string", "description": "Brand name" },
+        "tagline": { "type": "string", "description": "Slogan" },
+        "phone": { "type": "string", "description": "Contact phone number" },
+        "whatsapp": { "type": "string", "description": "WhatsApp contact URL" },
+        "email": { "type": "string", "description": "Support email" },
+        "address": { "type": "string", "description": "Physical workshop address" }
+      },
+      "required": ["store_name"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Public catalog products collection"
+    },
+    "/categories/{categoryId}": {
+      "schema": "Category",
+      "description": "Public clothing categories"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Customer placed orders and delivery tracking"
+    },
+    "/settings/{settingId}": {
+      "schema": "StoreSettings",
+      "description": "Store branding and contact settings"
+    }
+  }
+}
