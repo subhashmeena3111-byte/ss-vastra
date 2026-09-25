@@ -45,6 +45,8 @@ import {
   deleteProductRecord,
   getBannersList,
   getAllBannersList,
+  createBannerRecord,
+  deleteBannerRecord,
   getCouponsList,
   findCouponByCode,
   createCouponRecord,
@@ -67,8 +69,8 @@ import { localStore } from './src/db/localStore.ts';
 const app = express();
 const PORT = parseInt(process.env.PORT || '3000', 10);
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Enable CORS for frontend & API integration across domains
 app.use((req, res, next) => {
@@ -1723,53 +1725,33 @@ app.post(
       const slug =
         name.toLowerCase().replace(/[^a-z0-9]+/g, '-') + '-' + Math.floor(100 + Math.random() * 900);
 
-      const inserted = await db
-        .insert(products)
-        .values({
-          slug,
-          name,
-          category: category || 'Kurta Sets',
-          price: Number(price),
-          originalPrice: Number(originalPrice) || Number(price),
-          discountPercent: Number(discountPercent) || 0,
-          sizes: typeof sizes === 'string' ? sizes : JSON.stringify(sizes || ['S', 'M', 'L', 'XL']),
-          stock: Number(stock) || 50,
-          image,
-          description: description || '',
-          fabric: fabric || 'Cotton Blend',
-          color: color || '',
-          highlights:
-            typeof highlights === 'string'
-              ? highlights
-              : JSON.stringify(highlights || ['Pure Fabric', 'Fast Delivery']),
-          isNewArrival: Boolean(isNewArrival),
-          isBestSeller: Boolean(isBestSeller),
-          isFeatured: Boolean(isFeatured),
-          isActive: true,
-        })
-        .returning();
+      const productPayload = {
+        slug,
+        name,
+        category: category || 'Kurta Sets',
+        price: Number(price),
+        originalPrice: Number(originalPrice) || Number(price),
+        discountPercent: Number(discountPercent) || 0,
+        sizes: typeof sizes === 'string' ? sizes : JSON.stringify(sizes || ['S', 'M', 'L', 'XL']),
+        stock: Number(stock) || 50,
+        image,
+        description: description || '',
+        fabric: fabric || 'Cotton Blend',
+        color: color || '',
+        highlights:
+          typeof highlights === 'string'
+            ? highlights
+            : JSON.stringify(highlights || ['Pure Fabric', 'Fast Delivery']),
+        isNewArrival: Boolean(isNewArrival),
+        isBestSeller: Boolean(isBestSeller),
+        isFeatured: Boolean(isFeatured),
+        isActive: true,
+      };
 
-      const newProd = inserted[0];
-
-      // Add main image
-      await db.insert(productImages).values({
-        productId: newProd.id,
-        imageUrl: image,
-        displayOrder: 0,
-        isMain: true,
-      });
-
-      // Add extra gallery images if provided
-      if (Array.isArray(extraImages)) {
-        for (let i = 0; i < extraImages.length; i++) {
-          await db.insert(productImages).values({
-            productId: newProd.id,
-            imageUrl: extraImages[i],
-            displayOrder: i + 1,
-            isMain: false,
-          });
-        }
-      }
+      const newProd = await createProductRecord(
+        productPayload,
+        Array.isArray(extraImages) ? extraImages : []
+      );
 
       await logActivity(
         req.admin!.adminId,
@@ -1813,28 +1795,27 @@ app.put(
         isActive,
       } = req.body;
 
-      await db
-        .update(products)
-        .set({
-          name,
-          category,
-          price: Number(price),
-          originalPrice: Number(originalPrice),
-          discountPercent: Number(discountPercent),
-          sizes: typeof sizes === 'string' ? sizes : JSON.stringify(sizes),
-          stock: Number(stock),
-          image,
-          description,
-          fabric,
-          color,
-          highlights:
-            typeof highlights === 'string' ? highlights : JSON.stringify(highlights),
-          isNewArrival: Boolean(isNewArrival),
-          isBestSeller: Boolean(isBestSeller),
-          isFeatured: Boolean(isFeatured),
-          isActive: isActive !== undefined ? Boolean(isActive) : true,
-        })
-        .where(eq(products.id, prodId));
+      const updatePayload: any = {};
+      if (name !== undefined) updatePayload.name = name;
+      if (category !== undefined) updatePayload.category = category;
+      if (price !== undefined) updatePayload.price = Number(price);
+      if (originalPrice !== undefined) updatePayload.originalPrice = Number(originalPrice);
+      if (discountPercent !== undefined) updatePayload.discountPercent = Number(discountPercent);
+      if (sizes !== undefined) updatePayload.sizes = typeof sizes === 'string' ? sizes : JSON.stringify(sizes);
+      if (stock !== undefined) updatePayload.stock = Number(stock);
+      if (image !== undefined) updatePayload.image = image;
+      if (description !== undefined) updatePayload.description = description;
+      if (fabric !== undefined) updatePayload.fabric = fabric;
+      if (color !== undefined) updatePayload.color = color;
+      if (highlights !== undefined) {
+        updatePayload.highlights = typeof highlights === 'string' ? highlights : JSON.stringify(highlights);
+      }
+      if (isNewArrival !== undefined) updatePayload.isNewArrival = Boolean(isNewArrival);
+      if (isBestSeller !== undefined) updatePayload.isBestSeller = Boolean(isBestSeller);
+      if (isFeatured !== undefined) updatePayload.isFeatured = Boolean(isFeatured);
+      if (isActive !== undefined) updatePayload.isActive = Boolean(isActive);
+
+      const updated = await updateProductRecord(prodId, updatePayload);
 
       await logActivity(
         req.admin!.adminId,
@@ -1845,7 +1826,7 @@ app.put(
         { name, price }
       );
 
-      res.json({ success: true, message: 'Product updated successfully' });
+      res.json({ success: true, message: 'Product updated successfully', product: updated });
     } catch (err: unknown) {
       console.error('Update product error:', err);
       res.status(500).json({ success: false, error: 'Failed to update product' });
@@ -1859,7 +1840,7 @@ app.delete(
   async (req: AdminAuthRequest, res: Response) => {
     try {
       const prodId = parseInt(req.params.id, 10);
-      await db.delete(products).where(eq(products.id, prodId));
+      await deleteProductRecord(prodId);
 
       await logActivity(
         req.admin!.adminId,
@@ -1889,9 +1870,8 @@ app.patch(
         return res.status(400).json({ success: false, error: 'Image URL or data is required' });
       }
 
-      await db.update(products).set({ image }).where(eq(products.id, prodId));
+      await updateProductRecord(prodId, { image });
 
-      // Also ensure main image in productImages is synced
       try {
         await db.update(productImages).set({ isMain: false }).where(eq(productImages.productId, prodId));
         await db.insert(productImages).values({
@@ -1933,32 +1913,49 @@ app.post(
       }
 
       if (isMain) {
-        await db
-          .update(productImages)
-          .set({ isMain: false })
-          .where(eq(productImages.productId, prodId));
-        await db.update(products).set({ image: imageUrl }).where(eq(products.id, prodId));
+        await updateProductRecord(prodId, { image: imageUrl });
+        try {
+          await db
+            .update(productImages)
+            .set({ isMain: false })
+            .where(eq(productImages.productId, prodId));
+        } catch {}
       }
 
-      const inserted = await db
-        .insert(productImages)
-        .values({
-          productId: prodId,
-          imageUrl,
-          displayOrder: Date.now() % 1000,
-          isMain: Boolean(isMain),
-        })
-        .returning();
+      const existingProd = localStore.getProductById(prodId);
+      if (existingProd) {
+        const curImages = existingProd.images || [existingProd.image];
+        if (!curImages.includes(imageUrl)) {
+          localStore.updateProduct(prodId, { images: [...curImages, imageUrl] });
+        }
+      }
+
+      let insertedId = Date.now() % 100000;
+      try {
+        const inserted = await db
+          .insert(productImages)
+          .values({
+            productId: prodId,
+            imageUrl,
+            displayOrder: Date.now() % 1000,
+            isMain: Boolean(isMain),
+          })
+          .returning();
+        insertedId = inserted[0]?.id || insertedId;
+      } catch {}
 
       await logActivity(
         req.admin!.adminId,
         req.admin!.name,
         'ADD_PRODUCT_IMAGE',
         'product_image',
-        String(inserted[0].id)
+        String(insertedId)
       );
 
-      res.json({ success: true, image: inserted[0] });
+      res.json({
+        success: true,
+        image: { id: insertedId, productId: prodId, imageUrl, isMain: Boolean(isMain) },
+      });
     } catch (err: unknown) {
       console.error('Add image error:', err);
       res.status(500).json({ success: false, error: 'Failed to add image' });
@@ -1971,8 +1968,12 @@ app.delete(
   requireAdminAuth(['super_admin', 'staff']),
   async (req: AdminAuthRequest, res: Response) => {
     try {
+      const prodId = parseInt(req.params.id, 10);
       const imgId = parseInt(req.params.imageId, 10);
-      await db.delete(productImages).where(eq(productImages.id, imgId));
+
+      try {
+        await db.delete(productImages).where(eq(productImages.id, imgId));
+      } catch {}
 
       await logActivity(
         req.admin!.adminId,
@@ -2050,6 +2051,61 @@ app.post(
     } catch (err: unknown) {
       console.error('Create banner error:', err);
       res.status(500).json({ success: false, error: 'Failed to create banner' });
+    }
+  }
+);
+
+app.delete(
+  '/api/admin/banners/:id',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const bannerId = parseInt(req.params.id, 10);
+      await deleteBannerRecord(bannerId);
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'DELETE_BANNER',
+        'banner',
+        String(bannerId)
+      );
+
+      res.json({ success: true, message: 'Banner deleted' });
+    } catch (err: unknown) {
+      console.error('Delete banner error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete banner' });
+    }
+  }
+);
+
+app.put(
+  '/api/admin/banners/:id',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const bannerId = parseInt(req.params.id, 10);
+      const { title, subtitle, imageUrl, ctaText, ctaLink, isActive, displayOrder } = req.body;
+
+      try {
+        await db
+          .update(banners)
+          .set({
+            ...(title !== undefined ? { title } : {}),
+            ...(subtitle !== undefined ? { subtitle } : {}),
+            ...(imageUrl !== undefined ? { imageUrl } : {}),
+            ...(ctaText !== undefined ? { ctaText } : {}),
+            ...(ctaLink !== undefined ? { ctaLink } : {}),
+            ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+            ...(displayOrder !== undefined ? { displayOrder: Number(displayOrder) } : {}),
+          })
+          .where(eq(banners.id, bannerId));
+      } catch {}
+
+      res.json({ success: true, message: 'Banner updated' });
+    } catch (err: unknown) {
+      console.error('Update banner error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update banner' });
     }
   }
 );
@@ -2132,30 +2188,76 @@ app.post(
       const { code, discountType, discountValue, minOrderAmount, maxDiscount, isActive } =
         req.body;
 
-      const inserted = await db
-        .insert(coupons)
-        .values({
-          code: String(code).toUpperCase().trim(),
-          discountType: discountType || 'percent',
-          discountValue: Number(discountValue),
-          minOrderAmount: Number(minOrderAmount) || 0,
-          maxDiscount: maxDiscount ? Number(maxDiscount) : null,
-          isActive: isActive !== undefined ? Boolean(isActive) : true,
-        })
-        .returning();
+      const createdCoupon = await createCouponRecord({
+        code: String(code).toUpperCase().trim(),
+        discountType: discountType || 'percent',
+        discountValue: Number(discountValue),
+        minOrderAmount: Number(minOrderAmount) || 0,
+        maxDiscount: maxDiscount ? Number(maxDiscount) : undefined,
+        isActive: isActive !== undefined ? Boolean(isActive) : true,
+      });
 
       await logActivity(
         req.admin!.adminId,
         req.admin!.name,
         'CREATE_COUPON',
         'coupon',
-        String(inserted[0].id)
+        String(createdCoupon.id)
       );
 
-      res.json({ success: true, coupon: inserted[0] });
+      res.json({ success: true, coupon: createdCoupon });
     } catch (err: unknown) {
       console.error('Create coupon error:', err);
       res.status(500).json({ success: false, error: 'Failed to create coupon' });
+    }
+  }
+);
+
+app.delete(
+  '/api/admin/coupons/:id',
+  requireAdminAuth(['super_admin']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const couponId = parseInt(req.params.id, 10);
+      await deleteCouponRecord(couponId);
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'DELETE_COUPON',
+        'coupon',
+        String(couponId)
+      );
+
+      res.json({ success: true, message: 'Coupon deleted' });
+    } catch (err: unknown) {
+      console.error('Delete coupon error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete coupon' });
+    }
+  }
+);
+
+app.put(
+  '/api/admin/coupons/:id',
+  requireAdminAuth(['super_admin']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const couponId = parseInt(req.params.id, 10);
+      const { code, discountType, discountValue, minOrderAmount, maxDiscount, isActive } = req.body;
+
+      const updated = await updateCouponRecord(couponId, {
+        ...(code ? { code: String(code).toUpperCase().trim() } : {}),
+        ...(discountType ? { discountType } : {}),
+        ...(discountValue !== undefined ? { discountValue: Number(discountValue) } : {}),
+        ...(minOrderAmount !== undefined ? { minOrderAmount: Number(minOrderAmount) } : {}),
+        ...(maxDiscount !== undefined ? { maxDiscount: Number(maxDiscount) } : {}),
+        ...(isActive !== undefined ? { isActive: Boolean(isActive) } : {}),
+      });
+
+      res.json({ success: true, coupon: updated });
+    } catch (err: unknown) {
+      console.error('Update coupon error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update coupon' });
     }
   }
 );
@@ -2663,14 +2765,11 @@ app.put(
       const catId = parseInt(req.params.id, 10);
       const { name, image, description } = req.body;
 
-      await db
-        .update(categories)
-        .set({
-          name: name || undefined,
-          image: image || undefined,
-          description: description || undefined,
-        })
-        .where(eq(categories.id, catId));
+      const updated = await updateCategoryRecord(catId, {
+        ...(name !== undefined ? { name } : {}),
+        ...(image !== undefined ? { image } : {}),
+        ...(description !== undefined ? { description } : {}),
+      });
 
       await logActivity(
         req.admin!.adminId,
@@ -2681,7 +2780,7 @@ app.put(
         { name, image }
       );
 
-      res.json({ success: true, message: 'Category updated successfully' });
+      res.json({ success: true, message: 'Category updated successfully', category: updated });
     } catch (err: unknown) {
       console.error('Update category error:', err);
       res.status(500).json({ success: false, error: 'Failed to update category' });

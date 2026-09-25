@@ -322,6 +322,31 @@ export async function getAllBannersList(): Promise<LocalBanner[]> {
   return localStore.getBanners();
 }
 
+export async function createBannerRecord(bannerData: Omit<LocalBanner, 'id'>): Promise<LocalBanner> {
+  const local = localStore.createBanner(bannerData);
+  if (await isDbReady()) {
+    try {
+      const inserted = await db.insert(banners).values(bannerData).returning();
+      if (inserted && inserted.length > 0) return inserted[0] as LocalBanner;
+    } catch {
+      markDbOffline();
+    }
+  }
+  return local;
+}
+
+export async function deleteBannerRecord(id: number): Promise<boolean> {
+  localStore.deleteBanner(id);
+  if (await isDbReady()) {
+    try {
+      await db.delete(banners).where(eq(banners.id, id));
+    } catch {
+      markDbOffline();
+    }
+  }
+  return true;
+}
+
 // 5. Coupons
 export async function getCouponsList(): Promise<LocalCoupon[]> {
   if (await isDbReady()) {

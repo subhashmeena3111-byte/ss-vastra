@@ -1238,8 +1238,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1600;
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 1000;
             let width = img.width;
             let height = img.height;
 
@@ -1260,7 +1260,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             const ctx = canvas.getContext('2d');
             if (ctx) {
               ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL('image/jpeg', 0.88));
+              resolve(canvas.toDataURL('image/jpeg', 0.78));
             } else {
               resolve(event.target?.result as string);
             }
@@ -1343,8 +1343,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           const img = new Image();
           img.onload = () => {
             const canvas = document.createElement('canvas');
-            const MAX_WIDTH = 1200;
-            const MAX_HEIGHT = 1600;
+            const MAX_WIDTH = 800;
+            const MAX_HEIGHT = 1000;
             let width = img.width;
             let height = img.height;
 
@@ -1365,7 +1365,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             const ctx = canvas.getContext('2d');
             if (ctx) {
               ctx.drawImage(img, 0, 0, width, height);
-              resolve(canvas.toDataURL('image/jpeg', 0.88));
+              resolve(canvas.toDataURL('image/jpeg', 0.78));
             } else {
               resolve(event.target?.result as string);
             }
@@ -1417,16 +1417,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         body: JSON.stringify(sanitizedProduct),
       });
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setActionMessage(`Product ${isNew ? 'created' : 'updated'} successfully.`);
         setTimeout(() => setActionMessage(null), 3000);
         setEditingProduct(null);
         setIsCreatingProduct(false);
         loadTabData('products');
         if (onProductsUpdated) onProductsUpdated();
+      } else {
+        alert(data.error || 'Product save nahi ho paya. Kripya image size aur fields check karein.');
       }
-    } catch {
-      alert('Error saving product');
+    } catch (err: any) {
+      console.error('Save product error:', err);
+      alert('Error saving product: ' + (err?.message || 'Server error, please check connection'));
     }
   };
 
