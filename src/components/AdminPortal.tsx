@@ -1416,7 +1416,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         },
         body: JSON.stringify(sanitizedProduct),
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(rawText || `Server error (${res.status})`);
+      }
       if (res.ok && data.success) {
         setActionMessage(`Product ${isNew ? 'created' : 'updated'} successfully.`);
         setTimeout(() => setActionMessage(null), 3000);
@@ -1425,7 +1431,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         loadTabData('products');
         if (onProductsUpdated) onProductsUpdated();
       } else {
-        alert(data.error || 'Product save nahi ho paya. Kripya image size aur fields check karein.');
+        alert(data.error || 'Product save nahi ho paya. Kripya fields check karein.');
       }
     } catch (err: any) {
       console.error('Save product error:', err);
@@ -1440,7 +1446,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
-      const data = await res.json();
+      const rawText = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(rawText || `Server error (${res.status})`);
+      }
       if (data.success) {
         setActionMessage('Product deleted');
         setTimeout(() => setActionMessage(null), 3000);

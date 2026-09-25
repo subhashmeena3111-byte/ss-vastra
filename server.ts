@@ -1,9 +1,9 @@
-import express, { Request, Response } from 'express';
+import express from 'express';
+import type { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { createServer as createViteServer } from 'vite';
 import { db } from './src/db/index.ts';
 import {
   admins,
@@ -24,8 +24,8 @@ import { eq, desc, asc, and, or, sql } from 'drizzle-orm';
 import {
   requireAdminAuth,
   signAdminToken,
-  AdminAuthRequest,
 } from './src/middleware/auth.ts';
+import type { AdminAuthRequest } from './src/middleware/auth.ts';
 import { seedDatabase } from './src/db/seed.ts';
 import {
   sendPasswordResetEmail,
@@ -2797,7 +2797,8 @@ async function startServer() {
   // Seed database with initial products, super admin, categories, coupons, settings
   await seedDatabase();
 
-  if (process.env.NODE_ENV !== 'production') {
+  if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
+    const { createServer: createViteServer } = await import('vite');
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: 'spa',

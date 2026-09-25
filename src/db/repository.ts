@@ -13,7 +13,8 @@ import {
   settings,
 } from './schema.ts';
 import { eq, desc, asc, and, or, sql } from 'drizzle-orm';
-import { localStore, LocalCategory, LocalOrder, LocalAdmin, LocalCoupon, LocalBanner } from './localStore.ts';
+import { localStore } from './localStore.ts';
+import type { LocalCategory, LocalOrder, LocalAdmin, LocalCoupon, LocalBanner, LocalProduct } from './localStore.ts';
 
 // 1. Settings
 export async function getSettingsMap(): Promise<Record<string, string>> {

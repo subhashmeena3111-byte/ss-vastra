@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || process.env.ADMIN_JWT_SECRET || 'ss_vastra_admin_jwt_secret_jaipur_2026';
