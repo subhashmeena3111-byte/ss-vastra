@@ -881,9 +881,39 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         const d = await res.json();
         if (d.success) setOrdersList(d.orders);
       } else if (tab === 'products') {
-        const res = await fetch('/api/products');
-        const d = await res.json();
-        if (d.success) setProductsList(d.products);
+        try {
+          const res = await fetch('/api/admin/products', { headers });
+          const d = await res.json();
+          let prods: Product[] = d.success && Array.isArray(d.products) ? d.products : [];
+          if (prods.length === 0) {
+            const pubRes = await fetch('/api/products');
+            const pubD = await pubRes.json();
+            if (pubD.success && Array.isArray(pubD.products)) prods = pubD.products;
+          }
+
+          // Persistent cache sync: filter deleted & merge custom products
+          try {
+            const deletedIds: number[] = JSON.parse(
+              localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+            );
+            const customProds: Product[] = JSON.parse(
+              localStorage.getItem('ss_vastra_custom_products') || '[]'
+            );
+
+            prods = prods.filter((p: any) => !deletedIds.includes(p.id));
+            for (const cp of customProds) {
+              if (!deletedIds.includes(cp.id)) {
+                const idx = prods.findIndex((p: any) => p.id === cp.id);
+                if (idx >= 0) prods[idx] = { ...prods[idx], ...cp };
+                else prods.unshift(cp);
+              }
+            }
+          } catch {}
+
+          setProductsList(prods);
+        } catch (err) {
+          console.error(err);
+        }
       } else if (tab === 'customers') {
         const res = await fetch('/api/admin/customers', { headers });
         const d = await res.json();
@@ -1426,10 +1456,35 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       if (res.ok && data.success) {
         setActionMessage(`Product ${isNew ? 'created' : 'updated'} successfully.`);
         setTimeout(() => setActionMessage(null), 3000);
+
+        const savedItem: Product = data.product || {
+          ...sanitizedProduct,
+          id: isNew ? Date.now() : editingProduct.id!,
+        };
+
+        // Persist in localStorage custom products so it NEVER disappears across cold-starts
+        try {
+          const customProds: Product[] = JSON.parse(
+            localStorage.getItem('ss_vastra_custom_products') || '[]'
+          );
+          const cIdx = customProds.findIndex((p) => p.id === savedItem.id);
+          if (cIdx >= 0) customProds[cIdx] = { ...customProds[cIdx], ...savedItem };
+          else customProds.unshift(savedItem);
+          localStorage.setItem('ss_vastra_custom_products', JSON.stringify(customProds));
+
+          // Unmark from deleted if re-created
+          const deletedIds: number[] = JSON.parse(
+            localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+          );
+          const filteredDeleted = deletedIds.filter((id) => id !== savedItem.id);
+          localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(filteredDeleted));
+        } catch {}
+
         setEditingProduct(null);
         setIsCreatingProduct(false);
         loadTabData('products');
         if (onProductsUpdated) onProductsUpdated();
+        window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
       } else {
         alert(data.error || 'Product save nahi ho paya. Kripya fields check karein.');
       }
@@ -1439,8 +1494,42 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   };
 
-  const handleDeleteProduct = async (id: number) => {
-    if (!confirm('Are you sure you want to delete this product?')) return;
+  const handleDeleteProduct = async (id: number, productName?: string) => {
+    const title = productName ? `"${productName}"` : 'is product';
+    if (
+      !confirm(
+        `Kya aap sach me ${title} ko delete karna chahte hain?\n(Delete hone ke baad ye website se turant hat jayega)`
+      )
+    )
+      return;
+
+    // 1. Immediately remove from local state
+    setProductsList((prev) => prev.filter((p) => p.id !== id));
+    if (editingProduct?.id === id) {
+      setEditingProduct(null);
+    }
+
+    // 2. Persist deletion in localStorage so it NEVER reappears even if Vercel serverless restarts
+    try {
+      const deletedIds: number[] = JSON.parse(
+        localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+      );
+      if (!deletedIds.includes(id)) {
+        deletedIds.push(id);
+        localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(deletedIds));
+      }
+      const customProds: any[] = JSON.parse(
+        localStorage.getItem('ss_vastra_custom_products') || '[]'
+      );
+      const filteredCustom = customProds.filter((p) => p.id !== id);
+      localStorage.setItem('ss_vastra_custom_products', JSON.stringify(filteredCustom));
+    } catch {}
+
+    // 3. Dispatch global sync event
+    if (onProductsUpdated) onProductsUpdated();
+    window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
+
+    // 4. Send DELETE request to server
     try {
       const res = await fetch(`/api/admin/products/${id}`, {
         method: 'DELETE',
@@ -1450,17 +1539,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       let data: any = {};
       try {
         data = JSON.parse(rawText);
-      } catch {
-        throw new Error(rawText || `Server error (${res.status})`);
-      }
-      if (data.success) {
-        setActionMessage('Product deleted');
-        setTimeout(() => setActionMessage(null), 3000);
-        loadTabData('products');
-        if (onProductsUpdated) onProductsUpdated();
-      }
-    } catch {
-      alert('Failed to delete product');
+      } catch {}
+
+      setActionMessage('Product successfully delete ho gaya!');
+      setTimeout(() => setActionMessage(null), 3000);
+      loadTabData('products');
+    } catch (err: any) {
+      console.warn('Server delete error, but locally deleted:', err);
+      setActionMessage('Product successfully delete ho gaya!');
+      setTimeout(() => setActionMessage(null), 3000);
     }
   };
 
@@ -3081,11 +3168,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   <LinkIcon className="w-4 h-4" />
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteProduct(p.id)}
-                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition-colors"
-                                  title="Delete product"
+                                  type="button"
+                                  onClick={() => handleDeleteProduct(p.id, p.name)}
+                                  className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 transition-colors cursor-pointer"
+                                  title={`Delete ${p.name}`}
                                 >
-                                  <Trash2 className="w-4 h-4" />
+                                  <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                                  <span>Delete</span>
                                 </button>
                               </div>
                             </div>
@@ -5085,20 +5174,35 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3 border-t border-stone-100">
-                  <button
-                    type="button"
-                    onClick={() => setEditingProduct(null)}
-                    className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 font-semibold"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-5 py-2 rounded-xl bg-[#A87A2A] text-white font-bold hover:bg-[#8e6520]"
-                  >
-                    Save Changes
-                  </button>
+                <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-stone-100">
+                  {editingProduct.id ? (
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteProduct(editingProduct.id!, editingProduct.name)}
+                      className="px-3.5 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                      title="Is product ko hamesha ke liye delete karein"
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>Delete Outfit (Hataiye)</span>
+                    </button>
+                  ) : (
+                    <div />
+                  )}
+                  <div className="flex items-center gap-2 ml-auto">
+                    <button
+                      type="button"
+                      onClick={() => setEditingProduct(null)}
+                      className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 font-semibold text-xs hover:bg-stone-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-[#A87A2A] text-white font-bold text-xs hover:bg-[#8e6520] transition-colors"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>

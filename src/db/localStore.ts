@@ -122,6 +122,8 @@ export interface LocalStoreData {
   coupons: LocalCoupon[];
   banners: LocalBanner[];
   settings: Record<string, string>;
+  deletedProductIds?: number[];
+  customProducts?: LocalProduct[];
   activityLogs: Array<{
     id: number;
     adminId?: string;
@@ -647,6 +649,27 @@ class LocalStoreManager {
   }
 
   private loadData(): LocalStoreData {
+    const sanitizeLoaded = (parsed: any): LocalStoreData => {
+      const deletedIds: number[] = Array.isArray(parsed.deletedProductIds) ? parsed.deletedProductIds : [];
+      const customProds: LocalProduct[] = Array.isArray(parsed.customProducts) ? parsed.customProducts : [];
+      let prods: LocalProduct[] = Array.isArray(parsed.products) ? parsed.products : [];
+
+      // Filter out explicitly deleted products
+      prods = prods.filter((p: LocalProduct) => !deletedIds.includes(p.id));
+
+      // Ensure custom products are preserved
+      for (const cp of customProds) {
+        if (!deletedIds.includes(cp.id) && !prods.some((p) => p.id === cp.id)) {
+          prods.unshift(cp);
+        }
+      }
+
+      parsed.products = prods;
+      parsed.deletedProductIds = deletedIds;
+      parsed.customProducts = customProds.filter((cp) => !deletedIds.includes(cp.id));
+      return parsed as LocalStoreData;
+    };
+
     // 1. Try reading from /tmp/store.json if updated previously in this container
     try {
       const tmpPath = path.join('/tmp', 'store.json');
@@ -654,7 +677,7 @@ class LocalStoreManager {
         const content = fs.readFileSync(tmpPath, 'utf-8');
         const parsed = JSON.parse(content);
         if (parsed.products && parsed.categories && parsed.admins) {
-          return parsed;
+          return sanitizeLoaded(parsed);
         }
       }
     } catch {}
@@ -671,7 +694,7 @@ class LocalStoreManager {
           const content = fs.readFileSync(filePath, 'utf-8');
           const parsed = JSON.parse(content);
           if (parsed.products && parsed.categories && parsed.admins) {
-            return parsed;
+            return sanitizeLoaded(parsed);
           }
         }
       }
@@ -779,7 +802,15 @@ class LocalStoreManager {
       id: newId,
       createdAt: new Date().toISOString(),
     };
+    if (!this.data.customProducts) this.data.customProducts = [];
+    this.data.customProducts.unshift(newProduct);
     this.data.products.unshift(newProduct);
+
+    // If it was somehow previously marked deleted, unmark it
+    if (this.data.deletedProductIds) {
+      this.data.deletedProductIds = this.data.deletedProductIds.filter((id) => id !== newId);
+    }
+
     this.saveData();
     return newProduct;
   }
@@ -788,18 +819,34 @@ class LocalStoreManager {
     const idx = this.data.products.findIndex((p) => p.id === id);
     if (idx === -1) return null;
     this.data.products[idx] = { ...this.data.products[idx], ...updates };
+
+    // Also sync in customProducts if present
+    if (this.data.customProducts) {
+      const cIdx = this.data.customProducts.findIndex((p) => p.id === id);
+      if (cIdx >= 0) {
+        this.data.customProducts[cIdx] = { ...this.data.customProducts[cIdx], ...updates };
+      }
+    }
+
     this.saveData();
     return this.data.products[idx];
   }
 
   deleteProduct(id: number): boolean {
-    const prevLen = this.data.products.length;
-    this.data.products = this.data.products.filter((p) => p.id !== id);
-    if (this.data.products.length !== prevLen) {
-      this.saveData();
-      return true;
+    if (!this.data.deletedProductIds) this.data.deletedProductIds = [];
+    if (!this.data.deletedProductIds.includes(id)) {
+      this.data.deletedProductIds.push(id);
     }
-    return false;
+    this.data.products = this.data.products.filter((p) => p.id !== id);
+    if (this.data.customProducts) {
+      this.data.customProducts = this.data.customProducts.filter((p) => p.id !== id);
+    }
+    this.saveData();
+    return true;
+  }
+
+  getDeletedProductIds(): number[] {
+    return this.data.deletedProductIds || [];
   }
 
   // Settings

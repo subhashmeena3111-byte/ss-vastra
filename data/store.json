@@ -572,6 +572,37 @@
       "action": "DELETE_PRODUCT",
       "entity": "product",
       "entityId": "14",
+      "id": 70,
+      "createdAt": "2026-09-25T14:01:32.248Z"
+    },
+    {
+      "adminId": "1000",
+      "adminName": "Subhash Meena (SS VASTRA Owner)",
+      "action": "CREATE_PRODUCT",
+      "entity": "product",
+      "entityId": "14",
+      "details": "{\"name\":\"Temp Test Suit\",\"price\":999}",
+      "id": 69,
+      "createdAt": "2026-09-25T14:01:32.198Z"
+    },
+    {
+      "adminId": "1000",
+      "adminName": "Subhash Meena (SS VASTRA Owner)",
+      "action": "LOGIN",
+      "entity": "admin",
+      "entityId": "1",
+      "details": "{\"role\":\"super_admin\"}",
+      "ipAddress": "127.0.0.1",
+      "userEmail": "1000",
+      "id": 68,
+      "createdAt": "2026-09-25T14:01:32.174Z"
+    },
+    {
+      "adminId": "1000",
+      "adminName": "Subhash Meena (SS VASTRA Owner)",
+      "action": "DELETE_PRODUCT",
+      "entity": "product",
+      "entityId": "14",
       "id": 67,
       "createdAt": "2026-09-25T13:19:36.570Z"
     },

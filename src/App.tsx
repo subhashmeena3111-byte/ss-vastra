@@ -459,13 +459,21 @@ export function App() {
         setAdminPortalOpen(true);
       }
     };
+    const handleProductsUpdated = () => {
+      loadProductsFromAPI();
+    };
+
     window.addEventListener('popstate', onPopState);
     window.addEventListener('hashchange', onHashChange);
     window.addEventListener('open-admin-portal', () => setAdminPortalOpen(true));
+    window.addEventListener('ss-vastra-products-updated', handleProductsUpdated);
+    window.addEventListener('storage', handleProductsUpdated);
     return () => {
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('hashchange', onHashChange);
       window.removeEventListener('open-admin-portal', () => setAdminPortalOpen(true));
+      window.removeEventListener('ss-vastra-products-updated', handleProductsUpdated);
+      window.removeEventListener('storage', handleProductsUpdated);
     };
   }, [products, categories]);
 
@@ -509,12 +517,51 @@ export function App() {
     try {
       const res = await fetch('/api/products');
       const data = await res.json();
-      if (data.success && data.products && data.products.length > 0) {
-        setProducts(data.products);
-        handleParseDeepLink(data.products, categories);
-      }
+      let list: Product[] =
+        data.success && Array.isArray(data.products) && data.products.length > 0
+          ? data.products
+          : INITIAL_PRODUCTS;
+
+      // Persistence safeguard: filter out deleted products & merge custom products across serverless restarts
+      try {
+        const deletedIds: number[] = JSON.parse(
+          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+        );
+        const customProds: Product[] = JSON.parse(
+          localStorage.getItem('ss_vastra_custom_products') || '[]'
+        );
+
+        list = list.filter((p) => !deletedIds.includes(p.id));
+        for (const cp of customProds) {
+          if (!deletedIds.includes(cp.id)) {
+            const idx = list.findIndex((p) => p.id === cp.id);
+            if (idx >= 0) {
+              list[idx] = { ...list[idx], ...cp };
+            } else {
+              list.unshift(cp);
+            }
+          }
+        }
+      } catch {}
+
+      setProducts(list);
+      handleParseDeepLink(list, categories);
     } catch {
-      // Fallback already in place
+      try {
+        const deletedIds: number[] = JSON.parse(
+          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+        );
+        const customProds: Product[] = JSON.parse(
+          localStorage.getItem('ss_vastra_custom_products') || '[]'
+        );
+        let fallbackList = INITIAL_PRODUCTS.filter((p) => !deletedIds.includes(p.id));
+        for (const cp of customProds) {
+          if (!deletedIds.includes(cp.id) && !fallbackList.some((p) => p.id === cp.id)) {
+            fallbackList.unshift(cp);
+          }
+        }
+        setProducts(fallbackList);
+      } catch {}
     }
   };
 
