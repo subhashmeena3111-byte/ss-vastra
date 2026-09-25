@@ -38,6 +38,35 @@
       },
       "required": ["name", "slug"]
     },
+    "Banner": {
+      "title": "Banner",
+      "description": "Promotional homepage slider banner",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Banner headline" },
+        "subtitle": { "type": "string", "description": "Banner subtitle" },
+        "imageUrl": { "type": "string", "description": "Banner image link" },
+        "ctaText": { "type": "string", "description": "Button call to action text" },
+        "ctaLink": { "type": "string", "description": "Button target URL or category" },
+        "isActive": { "type": "boolean", "description": "Display flag" },
+        "displayOrder": { "type": "number", "description": "Sorting order" }
+      },
+      "required": ["title", "imageUrl"]
+    },
+    "Coupon": {
+      "title": "Coupon",
+      "description": "Discount voucher code",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "description": "Promo code" },
+        "discountType": { "type": "string", "description": "percent or fixed" },
+        "discountValue": { "type": "number", "description": "Discount value amount" },
+        "minOrderAmount": { "type": "number", "description": "Minimum order value" },
+        "maxDiscount": { "type": "number", "description": "Cap on discount amount" },
+        "isActive": { "type": "boolean", "description": "Active status" }
+      },
+      "required": ["code", "discountType", "discountValue"]
+    },
     "Order": {
       "title": "Order",
       "description": "Customer purchase order",
@@ -79,6 +108,14 @@
     "/categories/{categoryId}": {
       "schema": "Category",
       "description": "Public clothing categories"
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Store hero banners"
+    },
+    "/coupons/{couponId}": {
+      "schema": "Coupon",
+      "description": "Promotional discounts and coupons"
     },
     "/orders/{orderId}": {
       "schema": "Order",

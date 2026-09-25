@@ -15,6 +15,7 @@ import {
 import { eq, desc, asc, and, or, sql } from 'drizzle-orm';
 import { localStore } from './localStore.ts';
 import type { LocalCategory, LocalOrder, LocalAdmin, LocalCoupon, LocalBanner, LocalProduct } from './localStore.ts';
+import { triggerCloudSave } from './cloudSync.ts';
 
 // 1. Settings
 export async function getSettingsMap(): Promise<Record<string, string>> {
@@ -37,6 +38,7 @@ export async function getSettingsMap(): Promise<Record<string, string>> {
 
 export async function saveSetting(key: string, value: string) {
   localStore.updateSetting(key, value);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db
@@ -72,6 +74,7 @@ export async function getCategoriesList(): Promise<LocalCategory[]> {
 
 export async function updateCategoryRecord(id: number, updates: Partial<LocalCategory>) {
   localStore.updateCategory(id, updates);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.update(categories).set(updates).where(eq(categories.id, id));
@@ -238,6 +241,7 @@ export async function createProductRecord(productData: any, extraImages: string[
     ...productData,
     images: [productData.image, ...extraImages],
   });
+  triggerCloudSave();
 
   if (await isDbReady()) {
     try {
@@ -267,6 +271,7 @@ export async function createProductRecord(productData: any, extraImages: string[
 
 export async function updateProductRecord(id: number, updates: any) {
   localStore.updateProduct(id, updates);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       const res = await db.update(products).set(updates).where(eq(products.id, id)).returning();
@@ -280,6 +285,7 @@ export async function updateProductRecord(id: number, updates: any) {
 
 export async function deleteProductRecord(id: number) {
   localStore.deleteProduct(id);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.delete(productImages).where(eq(productImages.productId, id));
@@ -325,6 +331,7 @@ export async function getAllBannersList(): Promise<LocalBanner[]> {
 
 export async function createBannerRecord(bannerData: Omit<LocalBanner, 'id'>): Promise<LocalBanner> {
   const local = localStore.createBanner(bannerData);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       const inserted = await db.insert(banners).values(bannerData).returning();
@@ -338,6 +345,7 @@ export async function createBannerRecord(bannerData: Omit<LocalBanner, 'id'>): P
 
 export async function deleteBannerRecord(id: number): Promise<boolean> {
   localStore.deleteBanner(id);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.delete(banners).where(eq(banners.id, id));
@@ -380,6 +388,7 @@ export async function findCouponByCode(code: string): Promise<LocalCoupon | null
 
 export async function createCouponRecord(coupon: Omit<LocalCoupon, 'id'>) {
   const c = localStore.createCoupon(coupon);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.insert(coupons).values(coupon);
@@ -392,6 +401,7 @@ export async function createCouponRecord(coupon: Omit<LocalCoupon, 'id'>) {
 
 export async function updateCouponRecord(id: number, updates: Partial<LocalCoupon>) {
   localStore.updateCoupon(id, updates);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.update(coupons).set(updates).where(eq(coupons.id, id));
@@ -403,6 +413,7 @@ export async function updateCouponRecord(id: number, updates: Partial<LocalCoupo
 
 export async function deleteCouponRecord(id: number) {
   localStore.deleteCoupon(id);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.delete(coupons).where(eq(coupons.id, id));
@@ -507,6 +518,7 @@ export async function createOrderRecord(
     items: verifiedItems,
     shipment: initialShipment,
   });
+  triggerCloudSave();
 
   if (await isDbReady()) {
     try {
@@ -548,6 +560,7 @@ export async function updateOrderStatus(orderId: number, status: string, payment
   const updates: any = { status, orderStatus: status };
   if (paymentStatus) updates.paymentStatus = paymentStatus;
   localStore.updateOrder(orderId, updates);
+  triggerCloudSave();
   if (await isDbReady()) {
     try {
       await db.update(orders).set({ orderStatus: status, ...(paymentStatus ? { paymentStatus } : {}) }).where(eq(orders.id, orderId));

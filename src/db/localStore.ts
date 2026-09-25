@@ -707,7 +707,7 @@ class LocalStoreManager {
     return initial;
   }
 
-  private saveData(dataToSave?: LocalStoreData) {
+  saveData(dataToSave?: LocalStoreData) {
     const payload = JSON.stringify(dataToSave || this.data, null, 2);
     // 1. Attempt writing to project data/store.json (persistent local & VPS)
     let wroteSuccess = false;
@@ -847,6 +847,30 @@ class LocalStoreManager {
 
   getDeletedProductIds(): number[] {
     return this.data.deletedProductIds || [];
+  }
+
+  getAllProducts(): LocalProduct[] {
+    return [...this.data.products];
+  }
+
+  getAllCategories(): LocalCategory[] {
+    return [...this.data.categories];
+  }
+
+  getAllBanners(): LocalBanner[] {
+    return [...this.data.banners];
+  }
+
+  getAllCoupons(): LocalCoupon[] {
+    return [...this.data.coupons];
+  }
+
+  getAllOrders(): LocalOrder[] {
+    return [...this.data.orders];
+  }
+
+  getAllSettings(): Record<string, string> {
+    return { ...this.data.settings };
   }
 
   // Settings

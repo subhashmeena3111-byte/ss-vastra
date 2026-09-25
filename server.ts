@@ -32,6 +32,7 @@ import {
   sendStaffInviteEmail,
   sendAdminOtpEmail,
 } from './src/lib/email.ts';
+import { syncWithCloud } from './src/db/cloudSync.ts';
 import {
   getSettingsMap,
   saveSetting,
@@ -2796,6 +2797,7 @@ app.put(
 async function startServer() {
   // Seed database with initial products, super admin, categories, coupons, settings
   await seedDatabase();
+  await syncWithCloud();
 
   if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
     const { createServer: createViteServer } = await import('vite');
