@@ -30,25 +30,31 @@ export function isGoogleDriveUrl(url: string): boolean {
   );
 }
 
+const GUARANTEED_FALLBACK =
+  'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
+
 /**
  * Transforms any Google Drive URL (view link, sharing link, export link, etc.)
- * into a direct high-speed preview URL that renders directly in standard <img> tags.
+ * into a direct high-speed preview URL or proxied URL that renders directly in standard <img> tags.
  */
 export function normalizeProductImageUrl(url?: string | null): string {
-  if (!url) return 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
+  if (!url) return GUARANTEED_FALLBACK;
 
   const trimmed = url.trim();
-  if (!trimmed) return 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
+  if (!trimmed) return GUARANTEED_FALLBACK;
 
-  // If it's already a high-speed direct Google CDN link, keep it
-  if (trimmed.startsWith('https://lh3.googleusercontent.com/d/')) {
+  // Direct local base64 or upload path
+  if (trimmed.startsWith('data:image/') || trimmed.startsWith('/api/uploads/') || trimmed.startsWith('/uploads/')) {
     return trimmed;
   }
 
-  // If it is a Google Drive URL of any format, extract the file ID
-  const driveId = extractDriveFileId(trimmed);
-  if (driveId) {
-    return `https://lh3.googleusercontent.com/d/${driveId}`;
+  // If it's a Google Drive URL, route through our resilient server proxy so it never fails on login redirects
+  if (isGoogleDriveUrl(trimmed)) {
+    const driveId = extractDriveFileId(trimmed);
+    if (driveId) {
+      return `/api/image-proxy?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${driveId}`)}`;
+    }
+    return `/api/image-proxy?url=${encodeURIComponent(trimmed)}`;
   }
 
   return trimmed;
@@ -60,7 +66,7 @@ export function normalizeProductImageUrl(url?: string | null): string {
 export function getDriveThumbnailUrl(url: string): string {
   const driveId = extractDriveFileId(url);
   if (driveId) {
-    return `https://drive.google.com/thumbnail?id=${driveId}&sz=w1600`;
+    return `/api/image-proxy?url=${encodeURIComponent(`https://drive.google.com/uc?export=download&id=${driveId}`)}`;
   }
-  return normalizeProductImageUrl(url);
+  return GUARANTEED_FALLBACK;
 }

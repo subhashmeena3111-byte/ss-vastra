@@ -19,7 +19,7 @@ import { Footer } from './components/Footer.tsx';
 import { FloatingWhatsApp } from './components/FloatingWhatsApp.tsx';
 import { StoreLocationMap } from './components/StoreLocationMap.tsx';
 import { DeepLinkModal } from './components/DeepLinkModal.tsx';
-import { Product, Category, CartItem } from './types.ts';
+import { Product, Category, CartItem, Banner } from './types.ts';
 
 // Initial fallback curated catalog if backend database is cold-starting
 const INITIAL_PRODUCTS: Product[] = [
@@ -230,6 +230,7 @@ const INITIAL_CATEGORIES: Category[] = [
 export function App() {
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Products');
   const [activeTab, setActiveTab] = useState<'all' | 'new' | 'bestseller'>('all');
 
@@ -447,6 +448,7 @@ export function App() {
     handleParseDeepLink(products, categories);
     loadProductsFromAPI();
     loadCategoriesFromAPI();
+    loadBannersFromAPI();
   }, []);
 
   useEffect(() => {
@@ -462,17 +464,22 @@ export function App() {
     const handleProductsUpdated = () => {
       loadProductsFromAPI();
     };
+    const handleBannersUpdated = () => {
+      loadBannersFromAPI();
+    };
 
     window.addEventListener('popstate', onPopState);
     window.addEventListener('hashchange', onHashChange);
     window.addEventListener('open-admin-portal', () => setAdminPortalOpen(true));
     window.addEventListener('ss-vastra-products-updated', handleProductsUpdated);
+    window.addEventListener('ss-vastra-banners-updated', handleBannersUpdated);
     window.addEventListener('storage', handleProductsUpdated);
     return () => {
       window.removeEventListener('popstate', onPopState);
       window.removeEventListener('hashchange', onHashChange);
       window.removeEventListener('open-admin-portal', () => setAdminPortalOpen(true));
       window.removeEventListener('ss-vastra-products-updated', handleProductsUpdated);
+      window.removeEventListener('ss-vastra-banners-updated', handleBannersUpdated);
       window.removeEventListener('storage', handleProductsUpdated);
     };
   }, [products, categories]);
@@ -575,6 +582,18 @@ export function App() {
       }
     } catch {
       // Fallback already in place
+    }
+  };
+
+  const loadBannersFromAPI = async () => {
+    try {
+      const res = await fetch('/api/banners');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.banners) && data.banners.length > 0) {
+        setBanners(data.banners);
+      }
+    } catch (err) {
+      console.warn('Error loading banners:', err);
     }
   };
 
@@ -694,6 +713,7 @@ export function App() {
 
       {/* 2. Hero Banner Slider */}
       <HeroSlider
+        banners={banners}
         onExploreClick={() => {
           document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' });
         }}

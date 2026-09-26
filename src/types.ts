@@ -30,6 +30,19 @@ export interface Category {
   displayOrder?: number;
 }
 
+export interface Banner {
+  id: number;
+  title: string;
+  subtitle?: string;
+  imageUrl: string;
+  ctaText?: string;
+  ctaLink?: string;
+  badge?: string;
+  displayOrder?: number;
+  isActive: boolean;
+  createdAt?: string;
+}
+
 export interface CartItem {
   product: Product;
   size: string;

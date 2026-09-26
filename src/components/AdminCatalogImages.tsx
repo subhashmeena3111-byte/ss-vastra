@@ -341,7 +341,8 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
           ctaText: 'Order on WhatsApp',
           ctaLink: 'https://wa.me/919783770735',
         });
-        showNotice('New Hero Banner added!');
+        showNotice('New Hero Banner added and live on website!');
+        window.dispatchEvent(new CustomEvent('ss-vastra-banners-updated'));
       }
     } catch {
       // Local fallback
@@ -354,6 +355,62 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
         },
       ]);
       showNotice('Banner saved locally.');
+      window.dispatchEvent(new CustomEvent('ss-vastra-banners-updated'));
+    }
+  };
+
+  const handleDeleteBanner = async (bannerId: number) => {
+    if (!confirm('Kya aap is Hero Banner ko delete karna chahte hain?')) return;
+    setBannersList((prev) => prev.filter((b) => b.id !== bannerId));
+    try {
+      await fetch(`/api/admin/banners/${bannerId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (err) {
+      console.warn('Banner delete api note:', err);
+    }
+    showNotice('Hero banner delete ho gaya!');
+    window.dispatchEvent(new CustomEvent('ss-vastra-banners-updated'));
+  };
+
+  const handleBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1200;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.84);
+            setNewBanner((prev) => ({ ...prev, imageUrl: dataUrl }));
+          } else {
+            setNewBanner((prev) => ({ ...prev, imageUrl: event.target?.result as string }));
+          }
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      alert('Photo read error: ' + (err?.message || 'Try again'));
     }
   };
 
@@ -700,27 +757,47 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
               </h3>
 
               <div className="space-y-3">
-                {bannersList.map((b) => (
-                  <div
-                    key={b.id}
-                    className="p-4 bg-white rounded-2xl border border-stone-200 shadow-xs flex gap-4 items-center"
-                  >
-                    <img
-                      src={b.imageUrl}
-                      alt={b.title}
-                      className="w-24 h-16 object-cover rounded-xl border border-stone-200 shrink-0"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-serif text-sm font-bold text-[#2B2320] truncate">
-                        {b.title}
-                      </h4>
-                      <p className="text-[11px] text-stone-500 truncate">{b.subtitle}</p>
-                      <span className="inline-block mt-1 text-[10px] font-mono text-[#A87A2A]">
-                        CTA: {b.ctaText}
-                      </span>
+                {bannersList.length === 0 ? (
+                  <p className="text-xs text-stone-500 italic p-4 bg-white rounded-xl border border-stone-200">
+                    Abhi koi custom banner nahi hai. Niche form se naya banner add karein.
+                  </p>
+                ) : (
+                  bannersList.map((b) => (
+                    <div
+                      key={b.id}
+                      className="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-xs flex gap-3.5 items-center justify-between"
+                    >
+                      <img
+                        src={b.imageUrl}
+                        alt={b.title}
+                        className="w-20 h-16 object-cover rounded-xl border border-stone-200 shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-serif text-sm font-bold text-[#2B2320] truncate">
+                            {b.title}
+                          </h4>
+                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold shrink-0">
+                            Live
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-stone-500 truncate">{b.subtitle || 'Jaipur Collection'}</p>
+                        <span className="inline-block mt-0.5 text-[10px] font-mono text-[#A87A2A]">
+                          CTA: {b.ctaText || 'Order'}
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteBanner(b.id)}
+                        className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                        title="Delete Hero Banner"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Delete</span>
+                      </button>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -758,18 +835,59 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
                   />
                 </div>
 
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">
-                    Banner Image URL *
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    value={newBanner.imageUrl}
-                    onChange={(e) => setNewBanner({ ...newBanner, imageUrl: e.target.value })}
-                    placeholder="https://images.unsplash.com/..."
-                    className="w-full px-3 py-2 border border-stone-300 rounded-xl focus:outline-none focus:border-[#A87A2A]"
-                  />
+                {/* Banner Photo Upload (Device & URL) */}
+                <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-semibold text-stone-700">
+                      Banner Image (Photo Upload) *
+                    </label>
+                    <span className="text-[10px] text-[#A87A2A] font-medium">Device & Web URL</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <label className="px-3 py-1.5 bg-[#2B2320] hover:bg-stone-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs flex items-center gap-1.5">
+                      <Upload className="w-3.5 h-3.5 text-amber-400" />
+                      <span>Phone / PC se Photo Daalein</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleBannerFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  <div>
+                    <input
+                      type="url"
+                      required
+                      value={newBanner.imageUrl}
+                      onChange={(e) => setNewBanner({ ...newBanner, imageUrl: e.target.value })}
+                      placeholder="Ya Image link paste karein..."
+                      className="w-full px-3 py-2 border border-stone-300 rounded-xl font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+
+                  {newBanner.imageUrl && (
+                    <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-stone-200">
+                      <img
+                        src={newBanner.imageUrl}
+                        alt="Banner Preview"
+                        className="w-16 h-12 object-cover rounded-md border border-stone-200"
+                      />
+                      <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5" />
+                        Photo Ready
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setNewBanner({ ...newBanner, imageUrl: '' })}
+                        className="ml-auto text-[11px] text-rose-600 hover:underline font-semibold"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">

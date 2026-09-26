@@ -15,8 +15,8 @@ function ensureCloudSync(): Promise<void> {
 }
 
 export default async function handler(req: Request, res: Response) {
-  // Ensure database sync is completed before answering
-  await ensureCloudSync();
+  // Fire cloud sync in background without blocking customer requests
+  ensureCloudSync();
 
   // Normalize req.url so both /api/... and stripped /... work seamlessly on Vercel
   if (req.url && !req.url.startsWith('/api')) {
