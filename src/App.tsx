@@ -444,6 +444,24 @@ export function App() {
   };
 
   useEffect(() => {
+    // Self-healing: automatically clear any corrupt legacy cache on startup
+    try {
+      const customRaw = localStorage.getItem('ss_vastra_custom_products');
+      if (customRaw) {
+        try {
+          const parsed = JSON.parse(customRaw);
+          if (Array.isArray(parsed)) {
+            const clean = sanitizeProductList(parsed);
+            localStorage.setItem('ss_vastra_custom_products', JSON.stringify(clean.slice(0, 20)));
+          } else {
+            localStorage.removeItem('ss_vastra_custom_products');
+          }
+        } catch {
+          localStorage.removeItem('ss_vastra_custom_products');
+        }
+      }
+    } catch {}
+
     const token = localStorage.getItem('ss_vastra_admin_token');
     setIsAdminLoggedIn(!!token);
     handleParseDeepLink(products, categories);
