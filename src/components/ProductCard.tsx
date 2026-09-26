@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ShoppingBag, MessageCircle, Eye, Heart, Share2, Check } from 'lucide-react';
 import { Product } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
+import { normalizeProductSizes } from '../utils/productUtils.ts';
 
 interface ProductCardProps {
   product: Product;
@@ -16,11 +17,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   onAddToCart,
   onShareDeepLink,
 }) => {
+  const safeSizes = normalizeProductSizes(product.sizes);
   const [selectedSize, setSelectedSize] = useState<string>(
-    product.sizes && product.sizes.length ? product.sizes[0] : 'Free Size'
+    safeSizes.length ? safeSizes[0] : 'Free Size'
   );
   const [isLiked, setIsLiked] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+
 
   const discount =
     product.discountPercent ||
@@ -165,13 +168,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </div>
 
           {/* Sizes Row */}
-          {product.sizes && product.sizes.length > 0 && (
+          {safeSizes.length > 0 && (
             <div className="mb-3" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center gap-1 flex-wrap">
                 <span className="text-[10px] text-stone-600 uppercase font-medium mr-1">
                   Size:
                 </span>
-                {product.sizes.slice(0, 5).map((size) => (
+                {safeSizes.slice(0, 5).map((size) => (
                   <button
                     key={size}
                     type="button"
@@ -185,8 +188,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                     {size}
                   </button>
                 ))}
-                {product.sizes.length > 5 && (
-                  <span className="text-[9px] text-stone-600">+{product.sizes.length - 5}</span>
+                {safeSizes.length > 5 && (
+                  <span className="text-[9px] text-stone-600">+{safeSizes.length - 5}</span>
                 )}
               </div>
             </div>

@@ -85,6 +85,44 @@ export async function updateCategoryRecord(id: number, updates: Partial<LocalCat
 }
 
 // 3. Products
+export function formatProductRecord(p: any, galleryImages?: string[]) {
+  if (!p) return null;
+  let sizes = p.sizes;
+  if (typeof sizes === 'string') {
+    try {
+      sizes = JSON.parse(sizes);
+    } catch {
+      sizes = sizes.split(',').map((s: string) => s.trim()).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(sizes) || sizes.length === 0) sizes = ['S', 'M', 'L', 'XL'];
+
+  let highlights = p.highlights;
+  if (typeof highlights === 'string') {
+    try {
+      highlights = JSON.parse(highlights);
+    } catch {
+      highlights = highlights.split(',').map((h: string) => h.trim()).filter(Boolean);
+    }
+  }
+  if (!Array.isArray(highlights)) highlights = [];
+
+  const gallery = Array.isArray(galleryImages) && galleryImages.length > 0
+    ? galleryImages
+    : Array.isArray(p.gallery) && p.gallery.length > 0
+    ? p.gallery
+    : Array.isArray(p.images) && p.images.length > 0
+    ? p.images
+    : [p.image || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'];
+
+  return {
+    ...p,
+    sizes,
+    highlights,
+    gallery,
+  };
+}
+
 export async function getProductsList(filters?: {
   category?: string;
   search?: string;
@@ -107,16 +145,8 @@ export async function getProductsList(filters?: {
           .orderBy(asc(productImages.displayOrder));
 
         const mapped = allProducts.map((p) => {
-          const pImgs = allImages.filter((img) => img.productId === p.id);
-          return {
-            ...p,
-            sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes,
-            highlights:
-              typeof p.highlights === 'string'
-                ? JSON.parse(p.highlights)
-                : p.highlights || [],
-            gallery: pImgs.map((img) => img.imageUrl),
-          };
+          const pImgs = allImages.filter((img) => img.productId === p.id).map((i) => i.imageUrl);
+          return formatProductRecord(p, pImgs);
         });
 
         let filtered = mapped;
@@ -160,13 +190,7 @@ export async function getProductsList(filters?: {
     bestSeller: filters?.bestSeller === 'true' || filters?.bestSeller === true,
   });
 
-  return localList.map((p) => ({
-    ...p,
-    sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes,
-    highlights:
-      typeof p.highlights === 'string' ? JSON.parse(p.highlights) : p.highlights || [],
-    gallery: p.images || [p.image],
-  }));
+  return localList.map((p) => formatProductRecord(p, p.images));
 }
 
 export async function getAllProductsAdminList() {
@@ -176,14 +200,8 @@ export async function getAllProductsAdminList() {
       if (allProducts && allProducts.length > 0) {
         const allImages = await db.select().from(productImages).orderBy(asc(productImages.displayOrder));
         return allProducts.map((p) => {
-          const pImgs = allImages.filter((img) => img.productId === p.id);
-          return {
-            ...p,
-            sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes,
-            highlights:
-              typeof p.highlights === 'string' ? JSON.parse(p.highlights) : p.highlights || [],
-            gallery: pImgs.map((img) => img.imageUrl),
-          };
+          const pImgs = allImages.filter((img) => img.productId === p.id).map((i) => i.imageUrl);
+          return formatProductRecord(p, pImgs);
         });
       }
     } catch {
@@ -191,13 +209,7 @@ export async function getAllProductsAdminList() {
     }
   }
 
-  return localStore.getAllProductsAdmin().map((p) => ({
-    ...p,
-    sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes,
-    highlights:
-      typeof p.highlights === 'string' ? JSON.parse(p.highlights) : p.highlights || [],
-    gallery: p.images || [p.image],
-  }));
+  return localStore.getAllProductsAdmin().map((p) => formatProductRecord(p, p.images));
 }
 
 export async function getSingleProductById(id: number) {
@@ -212,13 +224,7 @@ export async function getSingleProductById(id: number) {
           .where(eq(productImages.productId, prod.id))
           .orderBy(asc(productImages.displayOrder));
 
-        return {
-          ...prod,
-          sizes: typeof prod.sizes === 'string' ? JSON.parse(prod.sizes) : prod.sizes,
-          highlights:
-            typeof prod.highlights === 'string' ? JSON.parse(prod.highlights) : prod.highlights || [],
-          gallery: imgs.map((i) => i.imageUrl),
-        };
+        return formatProductRecord(prod, imgs.map((i) => i.imageUrl));
       }
     } catch {
       markDbOffline();
@@ -227,13 +233,7 @@ export async function getSingleProductById(id: number) {
 
   const p = localStore.getProductById(id);
   if (!p) return null;
-  return {
-    ...p,
-    sizes: typeof p.sizes === 'string' ? JSON.parse(p.sizes) : p.sizes,
-    highlights:
-      typeof p.highlights === 'string' ? JSON.parse(p.highlights) : p.highlights || [],
-    gallery: p.images || [p.image],
-  };
+  return formatProductRecord(p, p.images);
 }
 
 export async function createProductRecord(productData: any, extraImages: string[] = []) {
@@ -261,12 +261,15 @@ export async function createProductRecord(productData: any, extraImages: string[
           isMain: false,
         });
       }
-      return inserted[0];
+      return formatProductRecord({
+        ...inserted[0],
+        gallery: [productData.image, ...extraImages],
+      });
     } catch {
       markDbOffline();
     }
   }
-  return createdLocal;
+  return formatProductRecord(createdLocal);
 }
 
 export async function updateProductRecord(id: number, updates: any) {
@@ -275,12 +278,13 @@ export async function updateProductRecord(id: number, updates: any) {
   if (await isDbReady()) {
     try {
       const res = await db.update(products).set(updates).where(eq(products.id, id)).returning();
-      return res[0] || updates;
+      const updatedItem = res[0] || { id, ...updates };
+      return formatProductRecord(updatedItem);
     } catch {
       markDbOffline();
     }
   }
-  return localStore.getProductById(id);
+  return formatProductRecord(localStore.getProductById(id));
 }
 
 export async function deleteProductRecord(id: number) {

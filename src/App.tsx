@@ -20,6 +20,7 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp.tsx';
 import { StoreLocationMap } from './components/StoreLocationMap.tsx';
 import { DeepLinkModal } from './components/DeepLinkModal.tsx';
 import { Product, Category, CartItem, Banner } from './types.ts';
+import { sanitizeProductList } from './utils/productUtils.ts';
 
 // Initial fallback curated catalog if backend database is cold-starting
 const INITIAL_PRODUCTS: Product[] = [
@@ -526,17 +527,18 @@ export function App() {
       const data = await res.json();
       let list: Product[] =
         data.success && Array.isArray(data.products) && data.products.length > 0
-          ? data.products
-          : INITIAL_PRODUCTS;
+          ? sanitizeProductList(data.products)
+          : sanitizeProductList(INITIAL_PRODUCTS);
 
       // Persistence safeguard: filter out deleted products & merge custom products across serverless restarts
       try {
         const deletedIds: number[] = JSON.parse(
           localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
         );
-        const customProds: Product[] = JSON.parse(
+        const rawCustom = JSON.parse(
           localStorage.getItem('ss_vastra_custom_products') || '[]'
         );
+        const customProds: Product[] = sanitizeProductList(rawCustom);
 
         list = list.filter((p) => !deletedIds.includes(p.id));
         for (const cp of customProds) {
@@ -551,24 +553,30 @@ export function App() {
         }
       } catch {}
 
-      setProducts(list);
-      handleParseDeepLink(list, categories);
+      const cleanList = sanitizeProductList(list);
+      setProducts(cleanList);
+      handleParseDeepLink(cleanList, categories);
     } catch {
       try {
         const deletedIds: number[] = JSON.parse(
           localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
         );
-        const customProds: Product[] = JSON.parse(
+        const rawCustom = JSON.parse(
           localStorage.getItem('ss_vastra_custom_products') || '[]'
         );
-        let fallbackList = INITIAL_PRODUCTS.filter((p) => !deletedIds.includes(p.id));
+        const customProds: Product[] = sanitizeProductList(rawCustom);
+        let fallbackList = sanitizeProductList(INITIAL_PRODUCTS).filter(
+          (p) => !deletedIds.includes(p.id)
+        );
         for (const cp of customProds) {
           if (!deletedIds.includes(cp.id) && !fallbackList.some((p) => p.id === cp.id)) {
             fallbackList.unshift(cp);
           }
         }
         setProducts(fallbackList);
-      } catch {}
+      } catch {
+        setProducts(sanitizeProductList(INITIAL_PRODUCTS));
+      }
     }
   };
 

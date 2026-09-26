@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Product } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
+import { normalizeProductSizes, normalizeProductHighlights } from '../utils/productUtils.ts';
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -33,6 +34,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 }) => {
   if (!product) return null;
 
+  const safeSizes = normalizeProductSizes(product.sizes);
+  const safeHighlights = normalizeProductHighlights(product.highlights);
+
   const allImages = [
     product.image,
     ...(product.gallery && product.gallery.length ? product.gallery : []),
@@ -42,9 +46,10 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
   const [activeImage, setActiveImage] = useState(uniqueImages[0]);
   const [selectedSize, setSelectedSize] = useState(
-    product.sizes && product.sizes.length ? product.sizes[0] : 'Free Size'
+    safeSizes.length ? safeSizes[0] : 'Free Size'
   );
   const [quantity, setQuantity] = useState(1);
+
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -192,7 +197,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
             </div>
 
             {/* Size Selector */}
-            {product.sizes && product.sizes.length > 0 && (
+            {safeSizes.length > 0 && (
               <div className="mb-4">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-xs font-bold text-[#2B2320] uppercase tracking-wider">
@@ -208,7 +213,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
-                  {product.sizes.map((size) => (
+                  {safeSizes.map((size) => (
                     <button
                       key={size}
                       type="button"
@@ -368,9 +373,9 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 {product.description}
               </p>
 
-              {product.highlights && product.highlights.length > 0 && (
+              {safeHighlights.length > 0 && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-stone-700">
-                  {product.highlights.map((h, i) => (
+                  {safeHighlights.map((h, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Check className="w-3.5 h-3.5 text-[#A87A2A] shrink-0" />
                       <span>{h}</span>

@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, CheckCircle2, ShoppingBag, MessageCircle, Heart } from 'lucide-react';
 import { Product } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
+import { normalizeProductHighlights } from '../utils/productUtils.ts';
 
 interface FeaturedSectionProps {
   onAddToCart: (product: Product, size: string) => void;
@@ -142,7 +143,7 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
 
             {/* Highlights List */}
             <div className="space-y-2 mb-6">
-              {featuredProduct.highlights?.map((h, i) => (
+              {normalizeProductHighlights(featuredProduct.highlights).map((h, i) => (
                 <div key={i} className="flex items-center gap-2 text-xs text-stone-700 font-medium">
                   <CheckCircle2 className="w-4 h-4 text-[#A87A2A] shrink-0" />
                   <span>{h}</span>

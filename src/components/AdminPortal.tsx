@@ -63,6 +63,7 @@ import { AdminCatalogImages } from './AdminCatalogImages.tsx';
 import { DeepLinkModal } from './DeepLinkModal.tsx';
 import { uploadImageToDrive, ensureDriveAuth, getAccessToken } from '../utils/imageUpload.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl, isGoogleDriveUrl } from '../utils/imageUtils.ts';
+import { sanitizeProduct, sanitizeProductList } from '../utils/productUtils.ts';
 
 interface AdminPortalProps {
   isOpen: boolean;
@@ -896,9 +897,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             const deletedIds: number[] = JSON.parse(
               localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
             );
-            const customProds: Product[] = JSON.parse(
+            const rawCustom = JSON.parse(
               localStorage.getItem('ss_vastra_custom_products') || '[]'
             );
+            const customProds: Product[] = sanitizeProductList(rawCustom);
 
             prods = prods.filter((p: any) => !deletedIds.includes(p.id));
             for (const cp of customProds) {
@@ -910,7 +912,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             }
           } catch {}
 
-          setProductsList(prods);
+          setProductsList(sanitizeProductList(prods));
         } catch (err) {
           console.error(err);
         }
@@ -1457,20 +1459,38 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         setActionMessage(`Product ${isNew ? 'created' : 'updated'} successfully.`);
         setTimeout(() => setActionMessage(null), 3000);
 
-        const savedItem: Product = data.product || {
+        const rawSaved: Product = data.product || {
           ...sanitizedProduct,
           id: isNew ? Date.now() : editingProduct.id!,
         };
+        const savedItem: Product = sanitizeProduct(rawSaved);
 
-        // Persist in localStorage custom products so it NEVER disappears across cold-starts
+        // Persist in localStorage custom products with quota-safe protection
         try {
-          const customProds: Product[] = JSON.parse(
+          const rawCustom = JSON.parse(
             localStorage.getItem('ss_vastra_custom_products') || '[]'
           );
+          const customProds: Product[] = sanitizeProductList(rawCustom);
           const cIdx = customProds.findIndex((p) => p.id === savedItem.id);
           if (cIdx >= 0) customProds[cIdx] = { ...customProds[cIdx], ...savedItem };
           else customProds.unshift(savedItem);
-          localStorage.setItem('ss_vastra_custom_products', JSON.stringify(customProds));
+
+          // If images are large data URLs, keep lightweight in localStorage to prevent 5MB quota crash
+          const safeCustomProds = customProds.slice(0, 30).map((p) => ({
+            ...p,
+            image:
+              p.image && p.image.startsWith('data:') && p.image.length > 30000
+                ? 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'
+                : p.image,
+            gallery: [],
+          }));
+
+          try {
+            localStorage.setItem('ss_vastra_custom_products', JSON.stringify(safeCustomProds));
+          } catch (storageErr) {
+            console.warn('LocalStorage quota reached, cleared custom cache safely:', storageErr);
+            localStorage.removeItem('ss_vastra_custom_products');
+          }
 
           // Unmark from deleted if re-created
           const deletedIds: number[] = JSON.parse(
