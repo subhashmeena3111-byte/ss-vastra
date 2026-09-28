@@ -14,6 +14,7 @@ import {
   Link as LinkIcon,
   Heart,
   Trash2,
+  Edit3,
 } from 'lucide-react';
 import { Product } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
@@ -28,7 +29,8 @@ interface ProductDetailModalProps {
   isWishlisted?: boolean;
   onToggleWishlist?: (product: Product) => void;
   isAdmin?: boolean;
-  onDeleteProduct?: (product: Product) => void;
+  onDeleteProduct?: (product: Product, alreadyConfirmed?: boolean) => void;
+  onEditProduct?: (product: Product) => void;
 }
 
 export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
@@ -41,6 +43,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   onToggleWishlist,
   isAdmin = false,
   onDeleteProduct,
+  onEditProduct,
 }) => {
   if (!product) return null;
 
@@ -389,22 +392,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                 </div>
               </div>
 
-              {/* Admin Actions: Delete Outfit directly from Modal */}
-              {isAdmin && onDeleteProduct && (
-                <div className="pt-2">
-                  {!showDeleteConfirm ? (
-                    <button
-                      type="button"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      className="w-full py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                      <span>Admin: Delete This Outfit from Catalog</span>
-                    </button>
-                  ) : (
+              {/* Direct Edit & Delete Outfit Action Bar */}
+              {(onEditProduct || onDeleteProduct) && (
+                <div className="pt-2 space-y-2 border-t border-stone-200 mt-2">
+                  <div className="flex gap-2">
+                    {onEditProduct && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onClose();
+                          onEditProduct(product);
+                        }}
+                        className="flex-1 py-2.5 px-3 rounded-xl bg-stone-900 hover:bg-[#A87A2A] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                      >
+                        <Edit3 className="w-3.5 h-3.5 text-amber-300" />
+                        <span>Edit Outfit (एडिट करें)</span>
+                      </button>
+                    )}
+
+                    {onDeleteProduct && !showDeleteConfirm && (
+                      <button
+                        type="button"
+                        onClick={() => setShowDeleteConfirm(true)}
+                        className="flex-1 py-2.5 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                        <span>Delete (हटाएं)</span>
+                      </button>
+                    )}
+                  </div>
+
+                  {onDeleteProduct && showDeleteConfirm && (
                     <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-center space-y-2 animate-in fade-in duration-150">
                       <p className="text-xs font-bold text-rose-800">
-                        Kya aap sach me is outfit ko delete karna chahte hain?
+                        Kya aap sach me is outfit ko catalog se delete karna chahte hain?
                       </p>
                       <div className="flex gap-2 justify-center">
                         <button
@@ -419,7 +440,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                           onClick={() => {
                             setShowDeleteConfirm(false);
                             onClose();
-                            onDeleteProduct(product);
+                            if (onDeleteProduct) onDeleteProduct(product, true);
                           }}
                           className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold cursor-pointer shadow-xs"
                         >

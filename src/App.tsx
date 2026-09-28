@@ -20,169 +20,13 @@ import { FloatingWhatsApp } from './components/FloatingWhatsApp.tsx';
 import { StoreLocationMap } from './components/StoreLocationMap.tsx';
 import { DeepLinkModal } from './components/DeepLinkModal.tsx';
 import { WishlistDrawer } from './components/WishlistDrawer.tsx';
+import { QuickEditProductModal } from './components/QuickEditProductModal.tsx';
+import { ConfirmDeleteModal } from './components/ConfirmDeleteModal.tsx';
 import { Product, Category, CartItem, Banner } from './types.ts';
 import { sanitizeProductList } from './utils/productUtils.ts';
 
-// Initial fallback curated catalog if backend database is cold-starting
-const INITIAL_PRODUCTS: Product[] = [
-  {
-    id: 1,
-    slug: 'gulabi-gotapatti-anarkali-suit',
-    name: 'Gulabi Mahal Handblock Gotapatti Anarkali Set with Organza Dupatta',
-    category: 'Anarkali & Dresses',
-    price: 2499,
-    originalPrice: 3899,
-    discountPercent: 36,
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    stock: 25,
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-    gallery: [
-      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    ],
-    description: 'Masterfully handcrafted by master artisans in Sanganer, Jaipur. Pure 60s cambric cotton with traditional floral block prints, authentic gold gotapatti hand embroidery along the yoke, and a breezy lightweight organza dupatta.',
-    fabric: 'Pure 60s Cambric Cotton',
-    color: 'Gulabi Rose Pink',
-    highlights: ['Handcrafted Yoke with Real Gotapatti', 'Flared 4.5m Kali Gher', 'Tailored Cigarette Pants'],
-    isNewArrival: true,
-    isBestSeller: true,
-    isFeatured: true,
-    isActive: true,
-  },
-  {
-    id: 2,
-    slug: 'indigo-bagru-straight-kurta-set',
-    name: 'Indigo Neelkamal Handblock Straight Kurta Set with Afghani Pants',
-    category: 'Kurta Sets',
-    price: 1899,
-    originalPrice: 2699,
-    discountPercent: 30,
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    stock: 40,
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-    description: 'Authentic Bagru natural indigo block prints with delicate thread embroidery on collar and cuffs. Paired with comfortable pleated Afghani trousers and matching mulmul dupatta.',
-    fabric: '100% Breathable Sanganeri Cotton',
-    color: 'Indigo Blue & Ivory',
-    highlights: ['Natural Dyes', 'Comfort Afghani Fit Pants', 'Subtle Thread Work'],
-    isNewArrival: true,
-    isBestSeller: true,
-    isActive: true,
-  },
-  {
-    id: 3,
-    slug: 'sage-green-cotton-coord-set',
-    name: 'Sanganer Floral Sage Green Collared Co-ord Set',
-    category: 'Co-ord Sets',
-    price: 1599,
-    originalPrice: 2299,
-    discountPercent: 30,
-    sizes: ['XS', 'S', 'M', 'L', 'XL'],
-    stock: 35,
-    image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=800&q=80',
-    description: 'Modern chic ethnic co-ord set featuring a button-down tunic top with notched lapels and tailored straight-cut trousers with deep functional pockets.',
-    fabric: 'Soft Rayon Slub Cotton',
-    color: 'Sage Green Floral',
-    highlights: ['Dual Pockets Included', 'Elasticated Comfort Waist', 'Zero Color Bleed'],
-    isNewArrival: true,
-    isBestSeller: false,
-    isActive: true,
-  },
-  {
-    id: 4,
-    slug: 'royal-peacock-mirror-kurti',
-    name: 'Peacock Blue Sheesha Mirror-Work Flared Kurti',
-    category: 'Kurta / Kurtis',
-    price: 1299,
-    originalPrice: 1799,
-    discountPercent: 28,
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    stock: 50,
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=800&q=80',
-    description: 'Vibrant peacock blue short flared kurti adorned with genuine Rajasthani mirror work (sheesha) and gotta patti accents on neckline and bell sleeves.',
-    fabric: 'Pure Cotton Mulmul',
-    color: 'Peacock Blue',
-    highlights: ['Hand-stitched Mirror Work', 'Three-quarter Bell Sleeves', 'Breezy Silhouette'],
-    isNewArrival: false,
-    isBestSeller: true,
-    isActive: true,
-  },
-  {
-    id: 5,
-    slug: 'kesar-yellow-chanderi-festive-fit',
-    name: 'Kesar Yellow Chanderi Silk Zari Suit with Scalloped Dupatta',
-    category: 'Festive Fits',
-    price: 2799,
-    originalPrice: 3999,
-    discountPercent: 30,
-    sizes: ['S', 'M', 'L', 'XL', 'XXL'],
-    stock: 20,
-    image: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=800&q=80',
-    description: 'Radiant festive suit crafted from rich Chanderi silk with intricate gold zari brocade motifs and scalloped organza dupatta with hand-finished latkans.',
-    fabric: 'Chanderi Silk & Santoon Lining',
-    color: 'Haldi Kesar Yellow',
-    highlights: ['Gold Zari Weave', 'Scalloped Embroidered Border', 'Complete 3-Piece Set'],
-    isNewArrival: false,
-    isBestSeller: true,
-    isActive: true,
-  },
-  {
-    id: 6,
-    slug: 'sanganer-wooden-block-cotton-fabric',
-    name: 'Sanganer Heritage Wooden Handblock Cotton Fabric (Per Meter)',
-    category: 'Fabrics',
-    price: 349,
-    originalPrice: 499,
-    discountPercent: 30,
-    sizes: ['1 Meter', '2.5 Meters', '5 Meters'],
-    stock: 120,
-    image: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=800&q=80',
-    description: 'Authentic 60x60 cambric cotton running fabric stamped by hand with carved teakwood blocks in Sanganer, Jaipur. Premium skin-friendly quality for bespoke tailoring.',
-    fabric: '100% Pure Cambric Cotton 60s',
-    color: 'Terracotta & Beige',
-    highlights: ['Direct from Sanganer Looms', 'Natural Eco Dyes', 'Ultra Soft Breathable Feel'],
-    isNewArrival: false,
-    isBestSeller: true,
-    isActive: true,
-  },
-  {
-    id: 7,
-    slug: 'peach-blossom-tier-anarkali',
-    name: 'Peach Blossom Tiered Flared Anarkali Kurta Set',
-    category: 'Anarkali & Dresses',
-    price: 2299,
-    originalPrice: 3199,
-    discountPercent: 28,
-    sizes: ['S', 'M', 'L', 'XL'],
-    stock: 30,
-    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=800&q=80',
-    description: 'Delicate pastel peach 3-tiered anarkali kurta set with hand-printed miniature florals, tassel tie-ups at waist, and straight cotton pants.',
-    fabric: 'Pure Cotton Mulmul',
-    color: 'Blush Peach',
-    highlights: ['Multi-tier Flared Hem', 'Handmade Dori Tassels', 'Soft Inner Lining'],
-    isNewArrival: true,
-    isBestSeller: false,
-    isActive: true,
-  },
-  {
-    id: 8,
-    slug: 'royal-maroon-velvet-touch-kurta',
-    name: 'Maroon Zardozi Embroidered Silk Kurta with Chanderi Pants',
-    category: 'Festive Fits',
-    price: 2999,
-    originalPrice: 4299,
-    discountPercent: 30,
-    sizes: ['M', 'L', 'XL', 'XXL'],
-    stock: 15,
-    image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=800&q=80',
-    description: 'Deep royal maroon silk kurta featuring regal zardozi threadwork along the keyhole neckline and embroidered sleeve hems. Paired with straight chanderi trousers.',
-    fabric: 'Raw Silk Blend',
-    color: 'Deep Maroon',
-    highlights: ['Handmade Zardozi Work', 'Regal Festive Tone', 'Premium Lining'],
-    isNewArrival: true,
-    isBestSeller: true,
-    isActive: true,
-  },
-];
+// Catalog starts clean: data loads dynamically from live database
+const INITIAL_PRODUCTS: Product[] = [];
 
 const INITIAL_CATEGORIES: Category[] = [
   {
@@ -356,29 +200,159 @@ export function App() {
     return products.filter((p) => wishlistIds.includes(p.id));
   }, [products, wishlistIds]);
 
-  const handleAdminDeleteProduct = async (product: Product) => {
-    if (!window.confirm(`Kya aap sach me "${product.name}" ko catalog se delete karna chahte hain?`)) return;
-    try {
-      const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
-      const res = await fetch(`/api/admin/products/${product.id}`, {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProducts((prev) => prev.filter((p) => p.id !== product.id));
-        setWishlistIds((prev) => prev.filter((id) => id !== product.id));
-        setActionNotice(`Outfit "${product.name}" delete ho gaya!`);
-        setTimeout(() => setActionNotice(null), 3000);
-        window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
-      }
-    } catch (err) {
-      console.error('Delete product error:', err);
+  const [quickEditProduct, setQuickEditProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+  const [currentDataMode, setCurrentDataMode] = useState<'live' | 'all' | 'demo'>('live');
+
+  const handleAdminDeleteProduct = (product: Product, alreadyConfirmed = false) => {
+    if (alreadyConfirmed) {
+      handleExecuteDeleteProduct(product);
+    } else {
+      setProductToDelete(product);
     }
   };
 
-  const handleAdminEditProduct = (_product: Product) => {
-    setAdminPortalOpen(true);
+  const handleExecuteDeleteProduct = async (product: Product) => {
+    setIsDeletingProduct(true);
+
+    // 1. Instantly remove from state so it disappears from the screen in 0ms!
+    setProducts((prev) => prev.filter((p) => p.id !== product.id));
+    setWishlistIds((prev) => prev.filter((id) => id !== product.id));
+
+    // 2. Persist in deleted IDs cache
+    try {
+      const deletedIds: number[] = JSON.parse(
+        localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+      );
+      if (!deletedIds.includes(product.id)) {
+        deletedIds.push(product.id);
+        localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(deletedIds));
+      }
+      const rawCustom = JSON.parse(
+        localStorage.getItem('ss_vastra_custom_products') || '[]'
+      );
+      const filteredCustom = rawCustom.filter((cp: any) => cp.id !== product.id);
+      localStorage.setItem('ss_vastra_custom_products', JSON.stringify(filteredCustom));
+    } catch {}
+
+    // 3. Inform server
+    try {
+      const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
+      await fetch(`/api/admin/products/${product.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    } catch (err) {
+      console.warn('Delete product API note:', err);
+    } finally {
+      setIsDeletingProduct(false);
+      setProductToDelete(null);
+    }
+
+    setActionNotice(`"${product.name}" delete ho gaya! ✓`);
+    setTimeout(() => setActionNotice(null), 3000);
+    window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
+  };
+
+  const handleAdminEditProduct = (product: Product) => {
+    setQuickEditProduct(product);
+  };
+
+  const handleSaveQuickEdit = async (updatedProduct: Product) => {
+    // 1. Optimistic UI update in 0ms
+    setProducts((prev) =>
+      prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
+    );
+
+    // 2. Local storage sync
+    try {
+      const rawCustom = JSON.parse(
+        localStorage.getItem('ss_vastra_custom_products') || '[]'
+      );
+      const idx = rawCustom.findIndex((cp: any) => cp.id === updatedProduct.id);
+      if (idx >= 0) rawCustom[idx] = updatedProduct;
+      else rawCustom.unshift(updatedProduct);
+      localStorage.setItem('ss_vastra_custom_products', JSON.stringify(rawCustom));
+    } catch {}
+
+    // 3. Server PUT sync
+    try {
+      const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
+      await fetch(`/api/admin/products/${updatedProduct.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(updatedProduct),
+      });
+    } catch (err) {
+      console.warn('Save product error:', err);
+    }
+
+    setActionNotice(`"${updatedProduct.name}" safalata se update ho gaya! ✓`);
+    setTimeout(() => setActionNotice(null), 3000);
+    window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
+  };
+
+  // Direct 1-Click Clear All Demo Data
+  const handleClearAllDemoData = async () => {
+    try {
+      const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
+      const res = await fetch('/api/admin/data-manager/purge-demo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      const d = await res.json().catch(() => ({}));
+      
+      // Clear all demo items from local storage caches
+      try {
+        localStorage.removeItem('ss_vastra_custom_products');
+        const deletedIds: number[] = [];
+        for (let i = 1; i <= 20; i++) deletedIds.push(i);
+        localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(deletedIds));
+      } catch {}
+
+      // Refresh catalog
+      await loadProductsFromAPI();
+      setCurrentDataMode('live');
+      setActionNotice(d.message || 'Sabhi Demo Data poori tarah clear ho gaya! ✓');
+      setTimeout(() => setActionNotice(null), 3500);
+    } catch (err) {
+      console.warn('Purge demo error:', err);
+      // Fallback local clear
+      setProducts((prev) => prev.filter((p) => !p.isDemo && p.id > 8));
+      setActionNotice('Demo data hata diya gaya! ✓');
+      setTimeout(() => setActionNotice(null), 3000);
+    }
+  };
+
+  // Direct 1-Click Purge All Catalog
+  const handlePurgeAllCatalog = async () => {
+    try {
+      const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
+      await fetch('/api/admin/data-manager/purge-all', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ confirm: 'PURGE_ALL_DATA' }),
+      });
+      
+      localStorage.removeItem('ss_vastra_custom_products');
+      localStorage.setItem('ss_vastra_cart', '[]');
+      setProducts([]);
+      setActionNotice('Catalog poori tarah clear ho gaya! Ab naye outfits add karein. ✓');
+      setTimeout(() => setActionNotice(null), 4000);
+    } catch (err) {
+      console.warn('Purge all error:', err);
+      setProducts([]);
+    }
   };
 
   useEffect(() => {
@@ -515,15 +489,31 @@ export function App() {
   };
 
   useEffect(() => {
-    // Self-healing: automatically clear any corrupt legacy cache on startup
+    // Self-healing: aggressively clear any demo products from legacy cache on startup
     try {
       const customRaw = localStorage.getItem('ss_vastra_custom_products');
       if (customRaw) {
         try {
           const parsed = JSON.parse(customRaw);
           if (Array.isArray(parsed)) {
-            const clean = sanitizeProductList(parsed);
-            localStorage.setItem('ss_vastra_custom_products', JSON.stringify(clean.slice(0, 20)));
+            const clean = parsed.filter(
+              (p: any) =>
+                !(
+                  p.isDemo === true ||
+                  (typeof p.id === 'number' && p.id <= 8) ||
+                  (p.name && (
+                    p.name.includes('Red Embroidered') ||
+                    p.name.includes('Gulabi Pink') ||
+                    p.name.includes('Mint Green') ||
+                    p.name.includes('Peacock Blue') ||
+                    p.name.includes('Kesar Yellow') ||
+                    p.name.includes('Sanganer Heritage Wooden') ||
+                    p.name.includes('Peach Blossom') ||
+                    p.name.includes('Maroon Zardozi')
+                  ))
+                )
+            );
+            localStorage.setItem('ss_vastra_custom_products', JSON.stringify(clean));
           } else {
             localStorage.removeItem('ss_vastra_custom_products');
           }
@@ -638,7 +628,10 @@ export function App() {
           localStorage.getItem('ss_vastra_custom_products') || '[]'
         );
         const customProds: Product[] = sanitizeProductList(rawCustom).filter(
-          (cp) => !deletedIds.includes(cp.id)
+          (cp) =>
+            !deletedIds.includes(cp.id) &&
+            cp.isDemo !== true &&
+            (typeof cp.id !== 'number' || cp.id > 8)
         );
         for (const cp of customProds) {
           const idx = list.findIndex((p) => p.id === cp.id);
@@ -822,6 +815,78 @@ export function App() {
       <section id="catalog-section" className="py-10 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
+          {/* Data Mode & Live Catalog Manager Strip */}
+          <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-white border border-[#E9A9BB]/40 shadow-xs flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
+              </span>
+              <div>
+                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                  <span>Data Status:</span>
+                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold uppercase">
+                    Live Production Mode
+                  </span>
+                </span>
+                <p className="text-[11px] text-stone-500">
+                  {products.length} Outfits active | Demo Data: {products.filter((p) => p.isDemo || p.id <= 8).length}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                type="button"
+                onClick={handleClearAllDemoData}
+                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                title="All demo data clear karein"
+              >
+                <span>Clear Demo Data</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setQuickEditProduct({
+                    id: Date.now(),
+                    slug: `new-outfit-${Date.now()}`,
+                    name: '',
+                    category: categories[0]?.name || 'Kurta Sets',
+                    price: 1499,
+                    originalPrice: 1999,
+                    discountPercent: 25,
+                    sizes: ['S', 'M', 'L', 'XL'],
+                    stock: 20,
+                    image: '',
+                    description: '',
+                    fabric: 'Pure Cotton',
+                    color: '',
+                    highlights: ['Jaipur Handcrafted', 'Premium Quality'],
+                    isNewArrival: true,
+                    isBestSeller: false,
+                    isFeatured: false,
+                    isActive: true,
+                    isDemo: false,
+                  });
+                }}
+                className="px-3.5 py-1.5 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                title="Direct naya outfit add karein"
+              >
+                <span>+ Add Outfit</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleOpenAdmin}
+                className="px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-amber-300 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                title="Admin Data Manager kholein"
+              >
+                <span>Data Manager</span>
+              </button>
+            </div>
+          </div>
+
           {/* Section Heading & Filter Tabs */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
             <div>
@@ -1004,6 +1069,23 @@ export function App() {
         onToggleWishlist={handleToggleWishlist}
         isAdmin={isAdminLoggedIn}
         onDeleteProduct={handleAdminDeleteProduct}
+        onEditProduct={handleAdminEditProduct}
+      />
+
+      <QuickEditProductModal
+        isOpen={!!quickEditProduct}
+        product={quickEditProduct}
+        onClose={() => setQuickEditProduct(null)}
+        onSave={handleSaveQuickEdit}
+        categories={categories.map((c) => c.name)}
+      />
+
+      <ConfirmDeleteModal
+        isOpen={!!productToDelete}
+        product={productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={handleExecuteDeleteProduct}
+        isDeleting={isDeletingProduct}
       />
 
       <WishlistDrawer

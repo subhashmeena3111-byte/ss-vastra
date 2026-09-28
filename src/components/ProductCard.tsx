@@ -90,27 +90,49 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           }}
         />
 
-        {/* Badges: Discount and Tags */}
-        <div className="absolute top-2.5 left-2.5 flex flex-col gap-1 items-start">
-          {discount > 0 && (
-            <span className="bg-[#A87A2A] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-xs">
-              {discount}% OFF
-            </span>
-          )}
-          {product.isBestSeller && (
-            <span className="bg-[#2B2320] text-amber-300 text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
-              Best Seller
-            </span>
-          )}
-          {product.isNewArrival && (
-            <span className="bg-[#E9A9BB] text-[#2B2320] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
-              New Drop
-            </span>
-          )}
-        </div>
+        {/* Direct Edit & Delete Controls directly on card */}
+        {(onEditProduct || onDeleteProduct) && (
+          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-30 pointer-events-auto">
+            {discount > 0 && (
+              <span className="bg-[#A87A2A] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-xs">
+                {discount}% OFF
+              </span>
+            )}
+            {onEditProduct && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onEditProduct(product);
+                }}
+                className="p-1.5 px-2 rounded-xl bg-stone-900/95 hover:bg-[#A87A2A] text-amber-300 hover:text-white shadow-md transition-all hover:scale-105 cursor-pointer flex items-center gap-1 border border-amber-300/30"
+                title={`Edit ${product.name} (सीधा एडिट करें)`}
+              >
+                <Edit3 className="w-3.5 h-3.5 text-amber-300" />
+                <span className="text-[10px] font-bold">Edit</span>
+              </button>
+            )}
+            {onDeleteProduct && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onDeleteProduct(product);
+                }}
+                className="p-1.5 px-2 rounded-xl bg-rose-600/95 hover:bg-rose-700 text-white shadow-md transition-all hover:scale-105 cursor-pointer flex items-center gap-1 border border-rose-400/30"
+                title={`Delete ${product.name} (हटाएं)`}
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold">Del</span>
+              </button>
+            )}
+          </div>
+        )}
 
         {/* Top Right Actions: Share Deep Link & Wishlist */}
-        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5">
+        <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20">
           <button
             type="button"
             onClick={handleShare}
@@ -142,38 +164,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-rose-500 text-rose-500' : ''}`} />
           </button>
         </div>
-
-        {/* Admin Quick Action Controls (when logged in as admin) */}
-        {isAdmin && (
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1 z-10">
-            {onEditProduct && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onEditProduct(product);
-                }}
-                className="p-1.5 rounded-full bg-stone-900/90 hover:bg-stone-900 text-white shadow-md transition-transform hover:scale-105"
-                title={`Edit ${product.name}`}
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-300" />
-              </button>
-            )}
-            {onDeleteProduct && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDeleteProduct(product);
-                }}
-                className="p-1.5 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-md transition-transform hover:scale-105 cursor-pointer"
-                title={`Delete ${product.name}`}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
-        )}
 
         {/* Quick View Floating Pill on Hover */}
         <div className="absolute inset-x-3 bottom-3 hidden sm:flex justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">

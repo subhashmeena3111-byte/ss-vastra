@@ -1,76 +1,76 @@
 {
   "categories": [
     {
-      "id": 1,
-      "image": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80",
       "description": "Graceful embroidered and printed ethnic kurta sets with bottoms & dupattas.",
-      "slug": "kurta-sets",
-      "name": "Kurta Sets",
+      "id": 1,
       "icon": "👗",
-      "displayOrder": 1
+      "displayOrder": 1,
+      "image": "https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80",
+      "slug": "kurta-sets",
+      "name": "Kurta Sets"
     },
     {
+      "icon": "👚",
+      "id": 2,
       "displayOrder": 2,
       "name": "Co-ord Sets",
-      "icon": "👚",
-      "description": "Contemporary matching sets designed for festive flair and everyday chic.",
+      "image": "https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=600&q=80",
       "slug": "co-ord-sets",
-      "id": 2,
-      "image": "https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=600&q=80"
+      "description": "Contemporary matching sets designed for festive flair and everyday chic."
     },
     {
-      "description": "Flowing flares, fine muslin cotton and gotapatti lace royal dresses.",
-      "id": 3,
-      "name": "Anarkali & Dresses",
-      "icon": "💃",
       "slug": "anarkali-dresses",
+      "name": "Anarkali & Dresses",
+      "displayOrder": 3,
+      "description": "Flowing flares, fine muslin cotton and gotapatti lace royal dresses.",
+      "icon": "💃",
       "image": "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=600&q=80",
-      "displayOrder": 3
+      "id": 3
     },
     {
-      "displayOrder": 4,
-      "slug": "kurta-kurtis",
       "image": "https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80",
-      "id": 4,
       "icon": "🌸",
-      "name": "Kurta / Kurtis",
-      "description": "Breathable Jaipur cotton tunics, short kurtas and daily office staples."
+      "slug": "kurta-kurtis",
+      "id": 4,
+      "displayOrder": 4,
+      "description": "Breathable Jaipur cotton tunics, short kurtas and daily office staples.",
+      "name": "Kurta / Kurtis"
     },
     {
-      "displayOrder": 5,
-      "slug": "festive-fits",
-      "id": 5,
+      "name": "Festive Fits",
       "description": "Rich Chanderi, zari borders and celebratory suits for auspicious occasions.",
+      "slug": "festive-fits",
       "image": "https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=600&q=80",
       "icon": "👑",
-      "name": "Festive Fits"
+      "id": 5,
+      "displayOrder": 5
     },
     {
-      "id": 6,
       "displayOrder": 6,
-      "image": "https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=600&q=80",
-      "slug": "fabrics",
+      "icon": "🧵",
       "description": "Direct from Sanganer master wooden handblock cambric & mulmul cotton.",
-      "name": "Fabrics",
-      "icon": "🧵"
+      "slug": "fabrics",
+      "image": "https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=600&q=80",
+      "id": 6,
+      "name": "Fabrics"
     },
     {
-      "slug": "new-arrivals",
-      "id": 7,
-      "image": "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=600&q=80",
-      "name": "New Arrivals",
       "icon": "🌟",
+      "id": 7,
       "displayOrder": 7,
+      "image": "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=600&q=80",
+      "slug": "new-arrivals",
+      "name": "New Arrivals",
       "description": "Freshly loomed designs and latest seasonal silhouettes."
     },
     {
+      "name": "Best Sellers",
+      "description": "Most loved Jaipur creations ordered across India.",
+      "slug": "best-sellers",
       "id": 8,
       "icon": "🔥",
-      "name": "Best Sellers",
-      "image": "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=600&q=80",
       "displayOrder": 8,
-      "slug": "best-sellers",
-      "description": "Most loved Jaipur creations ordered across India."
+      "image": "https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=600&q=80"
     }
   ],
   "products": [],
@@ -92,99 +92,99 @@
   ],
   "coupons": [
     {
-      "minOrderAmount": 999,
-      "discountValue": 10,
-      "discountType": "percent",
-      "isActive": true,
       "id": 1,
+      "isActive": true,
+      "minOrderAmount": 999,
+      "discountType": "percent",
+      "maxDiscount": 500,
       "code": "WELCOME10",
-      "maxDiscount": 500
+      "discountValue": 10
     },
     {
+      "minOrderAmount": 1499,
       "code": "JAIPUR100",
       "id": 2,
-      "minOrderAmount": 1499,
-      "discountValue": 100,
+      "discountType": "flat",
       "isActive": true,
-      "discountType": "flat"
+      "discountValue": 100
     },
     {
-      "isActive": true,
       "minOrderAmount": 2499,
-      "discountValue": 15,
-      "id": 3,
-      "discountType": "percent",
       "maxDiscount": 800,
-      "code": "FESTIVE15"
+      "code": "FESTIVE15",
+      "isActive": true,
+      "discountType": "percent",
+      "id": 3,
+      "discountValue": 15
     }
   ],
   "banners": [
     {
+      "title": "kurti",
+      "isActive": true,
+      "imageUrl": "/api/uploads/banner_1.jpg",
+      "ctaText": "Order on WhatsApp",
+      "subtitle": "kurti",
       "id": 1,
       "ctaLink": "https://wa.me/919783770735",
-      "imageUrl": "/api/uploads/banner_1.jpg",
-      "isActive": true,
-      "displayOrder": 1,
-      "subtitle": "kurti",
-      "title": "kurti",
-      "ctaText": "Order on WhatsApp"
+      "displayOrder": 1
     },
     {
-      "subtitle": "kurti",
       "displayOrder": 1,
-      "ctaText": "Order on WhatsApp",
-      "title": "kurti",
       "id": 2,
-      "ctaLink": "https://wa.me/919783770735",
-      "isActive": true,
-      "imageUrl": "/api/uploads/banner_2.jpg"
-    },
-    {
       "title": "kurti",
       "isActive": true,
+      "subtitle": "kurti",
       "ctaText": "Order on WhatsApp",
-      "imageUrl": "/api/uploads/banner_3.jpg",
+      "imageUrl": "/api/uploads/banner_2.jpg",
+      "ctaLink": "https://wa.me/919783770735"
+    },
+    {
       "id": 3,
       "displayOrder": 1,
-      "ctaLink": "https://wa.me/919783770735",
-      "subtitle": "kurti"
+      "isActive": true,
+      "subtitle": "kurti",
+      "imageUrl": "/api/uploads/banner_3.jpg",
+      "title": "kurti",
+      "ctaText": "Order on WhatsApp",
+      "ctaLink": "https://wa.me/919783770735"
     }
   ],
   "settings": {
-    "bank_accounts_list": "[{\"id\":\"bank_sbi_primary\",\"bankName\":\"State Bank of India (SBI)\",\"accountHolder\":\"SS VASTRA - SUBHASH MEENA\",\"accountNumber\":\"38920100054231\",\"ifsc\":\"SBIN0031114\",\"accountType\":\"Current Account\",\"branch\":\"Sanganer Branch, Jaipur, Rajasthan\",\"upiId\":\"9783770735@upi\",\"instructions\":\"Transfer via IMPS / NEFT and share UTR reference number or screenshot on WhatsApp helpline.\",\"isDefault\":true,\"isActive\":true},{\"id\":\"bank_hdfc_secondary\",\"bankName\":\"HDFC Bank\",\"accountHolder\":\"SS VASTRA JAIPUR\",\"accountNumber\":\"50200084729112\",\"ifsc\":\"HDFC0001832\",\"accountType\":\"Current Account\",\"branch\":\"Tonk Road Branch, Jaipur\",\"upiId\":\"ssvastra@okhdfcbank\",\"instructions\":\"Instant RTGS/NEFT settlement account.\",\"isDefault\":false,\"isActive\":true}]",
-    "upi_secondary_id": "ssvastra@okaxis",
-    "phone": "9783770735",
-    "bank_account_number": "38920100054231",
-    "upi_name": "SS VASTRA JAIPUR",
-    "instagram": "https://instagram.com/SS_vastra",
-    "bank_account_type": "Current Account",
-    "bank_ifsc": "SBIN0031114",
-    "category": "Ladies Fashion & Fabrics",
-    "bank_transfer_enabled": "true",
-    "razorpay_key_id": "1000",
-    "upi_number": "9783770735",
-    "bank_instructions": "Kripya payment transfer ke baad transaction UTR reference number aur screenshot WhatsApp helpline par bhejein.",
-    "bank_account_holder": "SS VASTRA - SUBHASH MEENA",
-    "payment_gateway_mode": "test",
-    "email": "subhashmeena3111@gmail.com",
-    "bank_name": "State Bank of India (SBI)",
-    "bank_branch": "Sanganer Branch, Jaipur",
-    "whatsapp": "https://wa.me/919783770735",
-    "address": "Green Vihar Vatika, Sanganer, Jaipur 303905",
-    "gateway_enabled": "true",
-    "shipping_fee": "0",
     "store_name": "SS VASTRA",
-    "free_shipping_threshold": "1999",
-    "payment_gateways_list": "[{\"id\":\"gw_razorpay\",\"name\":\"Razorpay Payment Gateway\",\"provider\":\"razorpay\",\"keyId\":\"1000\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":true,\"isDefault\":true,\"instructions\":\"Accepts UPI, Debit/Credit Cards, NetBanking, and Wallets.\"},{\"id\":\"gw_phonepe\",\"name\":\"PhonePe PG\",\"provider\":\"phonepe\",\"keyId\":\"MERCHANTUAT\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":false,\"isDefault\":false,\"instructions\":\"Direct PhonePe QR and Intent payments.\"},{\"id\":\"gw_paytm\",\"name\":\"Paytm Business All-in-One\",\"provider\":\"paytm\",\"keyId\":\"\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":false,\"isDefault\":false,\"instructions\":\"Paytm Wallet, Postpaid, and UPI.\"},{\"id\":\"gw_cashfree\",\"name\":\"Cashfree Payments\",\"provider\":\"cashfree\",\"keyId\":\"\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":false,\"isDefault\":false,\"instructions\":\"Cashfree auto-collect and cards gateway.\"}]",
-    "upi_enabled": "true",
-    "upi_accounts_list": "[{\"id\":\"upi_primary_gpay\",\"title\":\"Primary Google Pay / PhonePe UPI\",\"upiId\":\"9783770735@upi\",\"payeeName\":\"SS VASTRA JAIPUR\",\"phone\":\"9783770735\",\"qrImageUrl\":\"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3D9783770735%40upi%26pn%3DSS%2520VASTRA%2520JAIPUR%26cu%3DINR\",\"isDefault\":true,\"isActive\":true},{\"id\":\"upi_axis_merchant\",\"title\":\"Axis Bank Business UPI ID\",\"upiId\":\"ssvastra@okaxis\",\"payeeName\":\"SS VASTRA JAIPUR\",\"phone\":\"9783770735\",\"qrImageUrl\":\"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dssvastra%40okaxis%26pn%3DSS%2520VASTRA%2520JAIPUR%26cu%3DINR\",\"isDefault\":false,\"isActive\":true}]",
-    "delivery_partners": "[{\"id\":\"delhivery\",\"name\":\"Delhivery Express\",\"trackingUrlTemplate\":\"https://www.delhivery.com/track/package/{TRACKING_NO}\",\"estimatedDays\":\"2 to 4 Business Days\",\"phone\":\"1800 102 4567\",\"isDefault\":true,\"isActive\":true},{\"id\":\"shiprocket\",\"name\":\"Shiprocket Direct\",\"trackingUrlTemplate\":\"https://shiprocket.co/tracking/{TRACKING_NO}\",\"estimatedDays\":\"3 to 5 Business Days\",\"phone\":\"011 4056 1234\",\"isDefault\":false,\"isActive\":true},{\"id\":\"bluedart\",\"name\":\"Blue Dart Express\",\"trackingUrlTemplate\":\"https://www.bluedart.com/tracking?numbers={TRACKING_NO}\",\"estimatedDays\":\"1 to 3 Business Days\",\"phone\":\"1860 233 1234\",\"isDefault\":false,\"isActive\":true},{\"id\":\"dtdc\",\"name\":\"DTDC Courier\",\"trackingUrlTemplate\":\"https://www.dtdc.in/tracking/shipment-tracking.asp?trkType=AWB&strCnno={TRACKING_NO}\",\"estimatedDays\":\"3 to 5 Business Days\",\"phone\":\"080 2536 5032\",\"isDefault\":false,\"isActive\":true},{\"id\":\"indiapost\",\"name\":\"India Post Speed Post\",\"trackingUrlTemplate\":\"https://www.indiapost.gov.in/_layouts/15/dpt.cpt.infrastructure/pages/trackconsignment.aspx?consignment={TRACKING_NO}\",\"estimatedDays\":\"4 to 7 Business Days\",\"phone\":\"1800 266 6868\",\"isDefault\":false,\"isActive\":true}]",
-    "tagline": "Elegance in Every Thread",
-    "cod_enabled": "true",
+    "bank_account_type": "Current Account",
+    "payment_gateway_mode": "test",
+    "upi_number": "9783770735",
+    "whatsapp": "https://wa.me/919783770735",
+    "bank_name": "State Bank of India (SBI)",
     "upi_qr_image": "https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3D9783770735%40upi%26pn%3DSS%2520VASTRA%2520JAIPUR%26cu%3DINR",
-    "data_mode": "live",
+    "email": "subhashmeena3111@gmail.com",
+    "bank_branch": "Sanganer Branch, Jaipur",
+    "free_shipping_threshold": "1999",
+    "bank_accounts_list": "[{\"id\":\"bank_sbi_primary\",\"bankName\":\"State Bank of India (SBI)\",\"accountHolder\":\"SS VASTRA - SUBHASH MEENA\",\"accountNumber\":\"38920100054231\",\"ifsc\":\"SBIN0031114\",\"accountType\":\"Current Account\",\"branch\":\"Sanganer Branch, Jaipur, Rajasthan\",\"upiId\":\"9783770735@upi\",\"instructions\":\"Transfer via IMPS / NEFT and share UTR reference number or screenshot on WhatsApp helpline.\",\"isDefault\":true,\"isActive\":true},{\"id\":\"bank_hdfc_secondary\",\"bankName\":\"HDFC Bank\",\"accountHolder\":\"SS VASTRA JAIPUR\",\"accountNumber\":\"50200084729112\",\"ifsc\":\"HDFC0001832\",\"accountType\":\"Current Account\",\"branch\":\"Tonk Road Branch, Jaipur\",\"upiId\":\"ssvastra@okhdfcbank\",\"instructions\":\"Instant RTGS/NEFT settlement account.\",\"isDefault\":false,\"isActive\":true}]",
+    "bank_account_holder": "SS VASTRA - SUBHASH MEENA",
+    "delivery_partners": "[{\"id\":\"delhivery\",\"name\":\"Delhivery Express\",\"trackingUrlTemplate\":\"https://www.delhivery.com/track/package/{TRACKING_NO}\",\"estimatedDays\":\"2 to 4 Business Days\",\"phone\":\"1800 102 4567\",\"isDefault\":true,\"isActive\":true},{\"id\":\"shiprocket\",\"name\":\"Shiprocket Direct\",\"trackingUrlTemplate\":\"https://shiprocket.co/tracking/{TRACKING_NO}\",\"estimatedDays\":\"3 to 5 Business Days\",\"phone\":\"011 4056 1234\",\"isDefault\":false,\"isActive\":true},{\"id\":\"bluedart\",\"name\":\"Blue Dart Express\",\"trackingUrlTemplate\":\"https://www.bluedart.com/tracking?numbers={TRACKING_NO}\",\"estimatedDays\":\"1 to 3 Business Days\",\"phone\":\"1860 233 1234\",\"isDefault\":false,\"isActive\":true},{\"id\":\"dtdc\",\"name\":\"DTDC Courier\",\"trackingUrlTemplate\":\"https://www.dtdc.in/tracking/shipment-tracking.asp?trkType=AWB&strCnno={TRACKING_NO}\",\"estimatedDays\":\"3 to 5 Business Days\",\"phone\":\"080 2536 5032\",\"isDefault\":false,\"isActive\":true},{\"id\":\"indiapost\",\"name\":\"India Post Speed Post\",\"trackingUrlTemplate\":\"https://www.indiapost.gov.in/_layouts/15/dpt.cpt.infrastructure/pages/trackconsignment.aspx?consignment={TRACKING_NO}\",\"estimatedDays\":\"4 to 7 Business Days\",\"phone\":\"1800 266 6868\",\"isDefault\":false,\"isActive\":true}]",
+    "upi_secondary_id": "ssvastra@okaxis",
+    "bank_account_number": "38920100054231",
+    "upi_accounts_list": "[{\"id\":\"upi_primary_gpay\",\"title\":\"Primary Google Pay / PhonePe UPI\",\"upiId\":\"9783770735@upi\",\"payeeName\":\"SS VASTRA JAIPUR\",\"phone\":\"9783770735\",\"qrImageUrl\":\"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3D9783770735%40upi%26pn%3DSS%2520VASTRA%2520JAIPUR%26cu%3DINR\",\"isDefault\":true,\"isActive\":true},{\"id\":\"upi_axis_merchant\",\"title\":\"Axis Bank Business UPI ID\",\"upiId\":\"ssvastra@okaxis\",\"payeeName\":\"SS VASTRA JAIPUR\",\"phone\":\"9783770735\",\"qrImageUrl\":\"https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=upi%3A%2F%2Fpay%3Fpa%3Dssvastra%40okaxis%26pn%3DSS%2520VASTRA%2520JAIPUR%26cu%3DINR\",\"isDefault\":false,\"isActive\":true}]",
+    "category": "Ladies Fashion & Fabrics",
     "payment_gateway_provider": "razorpay",
-    "upi_id": "9783770735@upi"
+    "data_mode": "live",
+    "upi_name": "SS VASTRA JAIPUR",
+    "bank_ifsc": "SBIN0031114",
+    "phone": "9783770735",
+    "tagline": "Elegance in Every Thread",
+    "instagram": "https://instagram.com/SS_vastra",
+    "bank_transfer_enabled": "true",
+    "gateway_enabled": "true",
+    "payment_gateways_list": "[{\"id\":\"gw_razorpay\",\"name\":\"Razorpay Payment Gateway\",\"provider\":\"razorpay\",\"keyId\":\"1000\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":true,\"isDefault\":true,\"instructions\":\"Accepts UPI, Debit/Credit Cards, NetBanking, and Wallets.\"},{\"id\":\"gw_phonepe\",\"name\":\"PhonePe PG\",\"provider\":\"phonepe\",\"keyId\":\"MERCHANTUAT\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":false,\"isDefault\":false,\"instructions\":\"Direct PhonePe QR and Intent payments.\"},{\"id\":\"gw_paytm\",\"name\":\"Paytm Business All-in-One\",\"provider\":\"paytm\",\"keyId\":\"\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":false,\"isDefault\":false,\"instructions\":\"Paytm Wallet, Postpaid, and UPI.\"},{\"id\":\"gw_cashfree\",\"name\":\"Cashfree Payments\",\"provider\":\"cashfree\",\"keyId\":\"\",\"keySecret\":\"\",\"mode\":\"test\",\"isActive\":false,\"isDefault\":false,\"instructions\":\"Cashfree auto-collect and cards gateway.\"}]",
+    "bank_instructions": "Kripya payment transfer ke baad transaction UTR reference number aur screenshot WhatsApp helpline par bhejein.",
+    "shipping_fee": "0",
+    "razorpay_key_id": "1000",
+    "upi_id": "9783770735@upi",
+    "address": "Green Vihar Vatika, Sanganer, Jaipur 303905",
+    "cod_enabled": "true",
+    "upi_enabled": "true"
   },
   "activityLogs": [
     {
@@ -1257,14 +1257,15 @@
   ],
   "deletedProductIds": [
     9,
-    1,
-    2,
-    3,
-    4,
+    10,
     5,
     6,
     7,
-    8
+    8,
+    4,
+    3,
+    2,
+    1
   ],
   "customProducts": []
 }
