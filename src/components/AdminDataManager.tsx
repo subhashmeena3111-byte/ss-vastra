@@ -137,6 +137,11 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
       });
       const d = await res.json();
       if (d.success) {
+        try {
+          localStorage.removeItem('ss_vastra_custom_products');
+          const delIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 101];
+          localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(delIds));
+        } catch {}
         showToast(`Saara demo data safalata se hata diya gaya! (${d.removedProducts} outfits)`);
         onRefreshAll();
         window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
@@ -168,6 +173,13 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
       if (d.success) {
         setShowPurgeAllModal(false);
         setPurgeConfirmText('');
+        try {
+          localStorage.removeItem('ss_vastra_custom_products');
+          localStorage.removeItem('ss_vastra_cart');
+          localStorage.removeItem('ss_vastra_wishlist');
+          const delIds = [1, 2, 3, 4, 5, 6, 7, 8, 9, 101];
+          localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(delIds));
+        } catch {}
         showToast('Store catalog poori tarah se saaf ho chuka hai (Factory Reset Complete). Ab aap naye live outfits add kar sakte hain.');
         onRefreshAll();
         window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
@@ -191,6 +203,9 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
       });
       const d = await res.json();
       if (d.success) {
+        try {
+          localStorage.removeItem('ss_vastra_deleted_product_ids');
+        } catch {}
         showToast(`Curated Jaipur demo outfits safalata se restore ho gaye! (${d.restoredProducts} items)`);
         onRefreshAll();
         window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));

@@ -912,12 +912,17 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             } catch {}
           }
 
-          // Merge any custom draft products
+          // Merge any custom draft products (excluding deleted IDs)
           try {
+            const deletedIds: number[] = JSON.parse(
+              localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+            );
             const rawCustom = JSON.parse(
               localStorage.getItem('ss_vastra_custom_products') || '[]'
             );
-            const customProds: Product[] = sanitizeProductList(rawCustom);
+            const customProds: Product[] = sanitizeProductList(rawCustom).filter(
+              (cp) => !deletedIds.includes(cp.id)
+            );
             for (const cp of customProds) {
               const idx = prods.findIndex((p: any) => p.id === cp.id);
               if (idx >= 0) prods[idx] = { ...prods[idx], ...cp };

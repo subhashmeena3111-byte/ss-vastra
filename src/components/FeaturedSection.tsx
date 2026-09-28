@@ -5,42 +5,19 @@ import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUt
 import { normalizeProductHighlights } from '../utils/productUtils.ts';
 
 interface FeaturedSectionProps {
+  product?: Product | null;
   onAddToCart: (product: Product, size: string) => void;
   onQuickView: (product: Product) => void;
 }
 
 export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
+  product,
   onAddToCart,
   onQuickView,
 }) => {
-  const featuredProduct: Product = {
-    id: 101,
-    slug: 'gulabi-gotapatti-anarkali-suit',
-    name: 'Gulabi Mahal Handblock Gotapatti Anarkali Set with Organza Dupatta',
-    category: 'Anarkali & Dresses',
-    price: 2499,
-    originalPrice: 3899,
-    discountPercent: 36,
-    sizes: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
-    stock: 25,
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=85',
-    gallery: [
-      'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800&q=80',
-      'https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=800&q=80',
-    ],
-    description:
-      'Masterfully handcrafted by master artisans in Sanganer, Jaipur. Features pure 60s cambric cotton with traditional floral block prints, authentic gold gotapatti hand embroidery along the yoke, and a breezy lightweight organza dupatta.',
-    fabric: 'Pure 60s Cambric Cotton & Organza',
-    color: 'Gulabi Rose & Gold',
-    highlights: [
-      'Handcrafted Yoke with Real Gotapatti Lace',
-      'Flared 4.5 Meter Kali Gher',
-      'Matching Tapered Pants with Border Detailing',
-      'Hand-dyed Ombre Organza Dupatta',
-    ],
-    isFeatured: true,
-  };
+  if (!product) return null;
+
+  const featuredProduct = product;
 
   const handleWhatsApp = () => {
     const msg = `Namaste SS VASTRA! Main yeh signature outfit order karna chahti hu:\n*${featuredProduct.name}*\nPrice: ₹${featuredProduct.price}`;

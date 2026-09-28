@@ -230,7 +230,7 @@ const INITIAL_CATEGORIES: Category[] = [
 ];
 
 export function App() {
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All Products');
@@ -616,7 +616,7 @@ export function App() {
       const data = await res.json();
       let list: Product[] = [];
 
-      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
+      if (data.success && Array.isArray(data.products)) {
         list = sanitizeProductList(data.products);
         // Clear any stale deleted IDs from local storage that server confirms are active
         try {
@@ -627,16 +627,19 @@ export function App() {
           const validDeletedIds = deletedIds.filter((id) => !activeIds.has(id));
           localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(validDeletedIds));
         } catch {}
-      } else {
-        list = sanitizeProductList(INITIAL_PRODUCTS);
       }
 
-      // Merge newly added custom products if any exist locally
+      // Merge newly added custom products only if not in deleted IDs
       try {
+        const deletedIds: number[] = JSON.parse(
+          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+        );
         const rawCustom = JSON.parse(
           localStorage.getItem('ss_vastra_custom_products') || '[]'
         );
-        const customProds: Product[] = sanitizeProductList(rawCustom);
+        const customProds: Product[] = sanitizeProductList(rawCustom).filter(
+          (cp) => !deletedIds.includes(cp.id)
+        );
         for (const cp of customProds) {
           const idx = list.findIndex((p) => p.id === cp.id);
           if (idx >= 0) {
@@ -651,7 +654,7 @@ export function App() {
       setProducts(cleanList);
       handleParseDeepLink(cleanList, categories);
     } catch {
-      setProducts(sanitizeProductList(INITIAL_PRODUCTS));
+      // In case of network error, do not overwrite with demo data
     }
   };
 
@@ -920,10 +923,13 @@ export function App() {
       </section>
 
       {/* 5. Featured Product with Detail Shots */}
-      <FeaturedSection
-        onAddToCart={(p, size) => handleAddToCart(p, size, 1)}
-        onQuickView={(p) => handleOpenProductDetail(p)}
-      />
+      {products.length > 0 && (
+        <FeaturedSection
+          product={products.find((p) => p.isFeatured) || products[0] || null}
+          onAddToCart={(p, size) => handleAddToCart(p, size, 1)}
+          onQuickView={(p) => handleOpenProductDetail(p)}
+        />
+      )}
 
       {/* 6. Why Choose Us Section */}
       <WhyChooseUs />
