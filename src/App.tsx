@@ -872,22 +872,30 @@ export function App() {
 
           {/* 2-Column Grid on Mobile, 3-4 Columns on Desktop */}
           {displayedProducts.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-3xl border border-[#E9A9BB]/30 p-8">
+            <div className="text-center py-16 bg-white rounded-3xl border border-[#E9A9BB]/30 p-8 max-w-lg mx-auto">
               <p className="font-serif text-xl font-bold text-[#2B2320] mb-2">
-                No outfits found in this category right now
+                No outfits found in this view
               </p>
-              <p className="text-xs text-stone-500 mb-6">
-                Please check another category or browse all handcrafted products.
+              <p className="text-xs text-stone-500 mb-6 leading-relaxed">
+                Agar aapne Demo Data hata diya hai ya Live Mode on kiya hai, to Admin Portal se apne naye kapde add karein ya Demo Data Manager se sample catalog restore karein.
               </p>
-              <button
-                onClick={() => {
-                  setSelectedCategory('All Products');
-                  setActiveTab('all');
-                }}
-                className="px-6 py-2.5 rounded-full bg-[#A87A2A] text-white text-xs font-semibold hover:bg-[#8e6520]"
-              >
-                Show All Outfits
-              </button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <button
+                  onClick={() => {
+                    setSelectedCategory('All Products');
+                    setActiveTab('all');
+                  }}
+                  className="px-5 py-2.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold transition-colors"
+                >
+                  Show All Categories
+                </button>
+                <button
+                  onClick={handleOpenAdmin}
+                  className="px-5 py-2.5 rounded-full bg-[#A87A2A] text-white text-xs font-bold hover:bg-[#8e6520] transition-colors shadow-xs"
+                >
+                  Open Admin Portal
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">

@@ -1810,6 +1810,172 @@ app.post(
 );
 
 // 3. Products Management (CRUD + Images)
+app.get(
+  '/api/admin/products',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const mode = (req.query.mode as 'all' | 'live' | 'demo') || localStore.getDataMode();
+      const allProducts = localStore.getAllProductsAdmin(mode);
+      res.json({ success: true, products: allProducts, mode });
+    } catch (err: unknown) {
+      console.error('Admin products fetch error:', err);
+      res.status(500).json({ success: false, error: 'Failed to load admin products' });
+    }
+  }
+);
+
+// Demo Data Manager Endpoints (Super Admin & Staff)
+app.get(
+  '/api/admin/data-manager/status',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (_req: AdminAuthRequest, res: Response) => {
+    try {
+      const status = localStore.getDataStatus();
+      res.json({ success: true, ...status });
+    } catch (err: unknown) {
+      console.error('Data manager status error:', err);
+      res.status(500).json({ success: false, error: 'Failed to get data status' });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/data-manager/mode',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { mode } = req.body;
+      if (!['all', 'live', 'demo'].includes(mode)) {
+        return res.status(400).json({ success: false, error: 'Invalid mode. Must be all, live, or demo.' });
+      }
+      localStore.setDataMode(mode);
+      await pushAllToCloud();
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'CHANGE_DATA_MODE',
+        'system',
+        undefined,
+        { mode }
+      );
+      res.json({ success: true, message: `Data mode updated to ${mode}`, mode });
+    } catch (err: unknown) {
+      console.error('Data manager mode change error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update data mode' });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/data-manager/purge-demo',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const result = localStore.purgeDemoData();
+      await pushAllToCloud();
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'PURGE_DEMO_DATA',
+        'system',
+        undefined,
+        result
+      );
+      res.json({
+        success: true,
+        message: `${result.removedProducts} demo outfits and ${result.removedOrders} demo orders removed successfully.`,
+        ...result,
+      });
+    } catch (err: unknown) {
+      console.error('Purge demo error:', err);
+      res.status(500).json({ success: false, error: 'Failed to purge demo data' });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/data-manager/purge-all',
+  requireAdminAuth(['super_admin']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { confirmation } = req.body;
+      if (confirmation !== 'PURGE_ALL_DATA' && confirmation !== 'CONFIRM') {
+        return res.status(400).json({
+          success: false,
+          error: 'Safety verification failed. Please send confirmation keyword.',
+        });
+      }
+      const result = localStore.purgeAllCatalogData();
+      await pushAllToCloud();
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'PURGE_ALL_DATA',
+        'system',
+        undefined,
+        result
+      );
+      res.json({
+        success: true,
+        message: 'All catalog products and orders have been purged. Store is ready for fresh data.',
+        ...result,
+      });
+    } catch (err: unknown) {
+      console.error('Purge all error:', err);
+      res.status(500).json({ success: false, error: 'Failed to purge all data' });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/data-manager/restore-demo',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const result = localStore.restoreDemoData();
+      await pushAllToCloud();
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'RESTORE_DEMO_DATA',
+        'system',
+        undefined,
+        result
+      );
+      res.json({
+        success: true,
+        message: `${result.restoredProducts} curated Jaipur demo outfits restored successfully!`,
+        ...result,
+      });
+    } catch (err: unknown) {
+      console.error('Restore demo error:', err);
+      res.status(500).json({ success: false, error: 'Failed to restore demo data' });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/data-manager/toggle-product-demo/:id',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const prodId = parseInt(req.params.id, 10);
+      const prod = localStore.getProductById(prodId);
+      if (!prod) {
+        return res.status(404).json({ success: false, error: 'Product not found' });
+      }
+      const newStatus = !prod.isDemo;
+      localStore.updateProduct(prodId, { isDemo: newStatus });
+      await pushAllToCloud();
+      res.json({ success: true, message: `Product marked as ${newStatus ? 'Demo' : 'Live'}`, isDemo: newStatus });
+    } catch (err: unknown) {
+      console.error('Toggle product demo error:', err);
+      res.status(500).json({ success: false, error: 'Failed to toggle product demo state' });
+    }
+  }
+);
+
 app.post(
   '/api/admin/products',
   requireAdminAuth(['super_admin', 'staff']),

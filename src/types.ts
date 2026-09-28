@@ -18,6 +18,7 @@ export interface Product {
   isBestSeller?: boolean;
   isFeatured?: boolean;
   isActive?: boolean;
+  isDemo?: boolean;
 }
 
 export interface Category {

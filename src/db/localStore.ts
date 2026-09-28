@@ -34,6 +34,7 @@ export interface LocalProduct {
   isBestSeller: boolean;
   isFeatured: boolean;
   isActive: boolean;
+  isDemo?: boolean;
   createdAt: string;
   images?: string[];
 }
@@ -57,6 +58,7 @@ export interface LocalOrder {
   status: string;
   orderStatus?: string;
   notes?: string | null;
+  isDemo?: boolean;
   createdAt: string;
   items?: Array<{
     id?: number;
@@ -664,6 +666,12 @@ class LocalStoreManager {
         }
       }
 
+      // Mark demo products correctly (IDs <= 8 or isDemo === true)
+      prods = prods.map((p: any) => ({
+        ...p,
+        isDemo: p.isDemo !== undefined ? Boolean(p.isDemo) : (typeof p.id === 'number' && p.id <= 8),
+      }));
+
       parsed.products = prods;
       parsed.deletedProductIds = deletedIds;
       parsed.customProducts = customProds.filter((cp) => !deletedIds.includes(cp.id));
@@ -745,14 +753,126 @@ class LocalStoreManager {
   }
 
   // Products
+  getDataMode(): 'all' | 'live' | 'demo' {
+    const mode = this.data.settings?.['data_mode'];
+    if (mode === 'live' || mode === 'demo' || mode === 'all') return mode;
+    return 'all';
+  }
+
+  setDataMode(mode: 'all' | 'live' | 'demo'): void {
+    if (!this.data.settings) this.data.settings = {};
+    this.data.settings['data_mode'] = mode;
+    this.saveData();
+  }
+
+  purgeDemoData(): { removedProducts: number; removedOrders: number } {
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    const demoProds = this.data.products.filter(isDemoItem);
+    const countProds = demoProds.length;
+
+    this.data.products = this.data.products.filter((p) => !isDemoItem(p));
+    if (this.data.customProducts) {
+      this.data.customProducts = this.data.customProducts.filter((p) => !isDemoItem(p));
+    }
+    const deletedIds = this.data.deletedProductIds || [];
+    demoProds.forEach((p) => {
+      if (!deletedIds.includes(p.id)) deletedIds.push(p.id);
+    });
+    this.data.deletedProductIds = deletedIds;
+
+    const demoOrders = (this.data.orders || []).filter((o) => o.isDemo === true || o.orderNumber.startsWith('SSV-DEMO'));
+    const countOrders = demoOrders.length;
+    this.data.orders = (this.data.orders || []).filter((o) => !(o.isDemo === true || o.orderNumber.startsWith('SSV-DEMO')));
+
+    this.saveData();
+    return {
+      removedProducts: countProds,
+      removedOrders: countOrders,
+    };
+  }
+
+  purgeAllCatalogData(): { removedProducts: number; removedOrders: number } {
+    const countProds = this.data.products.length;
+    const countOrders = (this.data.orders || []).length;
+
+    const deletedIds = this.data.deletedProductIds || [];
+    this.data.products.forEach((p) => {
+      if (!deletedIds.includes(p.id)) deletedIds.push(p.id);
+    });
+    this.data.deletedProductIds = deletedIds;
+    this.data.products = [];
+    this.data.customProducts = [];
+    this.data.orders = [];
+
+    this.saveData();
+    return {
+      removedProducts: countProds,
+      removedOrders: countOrders,
+    };
+  }
+
+  restoreDemoData(): { restoredProducts: number } {
+    const initial = createInitialData();
+    const demoProds = initial.products.map((p) => ({ ...p, isDemo: true }));
+
+    if (this.data.deletedProductIds) {
+      this.data.deletedProductIds = this.data.deletedProductIds.filter((id) => id > 8);
+    }
+
+    for (const dp of demoProds) {
+      const idx = this.data.products.findIndex((p) => p.id === dp.id);
+      if (idx >= 0) {
+        this.data.products[idx] = dp;
+      } else {
+        this.data.products.push(dp);
+      }
+    }
+
+    this.saveData();
+    return {
+      restoredProducts: demoProds.length,
+    };
+  }
+
+  getDataStatus() {
+    const mode = this.getDataMode();
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    const totalProducts = this.data.products.length;
+    const demoProducts = this.data.products.filter(isDemoItem).length;
+    const liveProducts = totalProducts - demoProducts;
+
+    const totalOrders = (this.data.orders || []).length;
+    const demoOrders = (this.data.orders || []).filter((o) => o.isDemo === true || o.orderNumber.startsWith('SSV-DEMO')).length;
+    const liveOrders = totalOrders - demoOrders;
+
+    return {
+      mode,
+      totalProducts,
+      demoProducts,
+      liveProducts,
+      totalOrders,
+      demoOrders,
+      liveOrders,
+    };
+  }
+
   getProducts(filters?: {
     category?: string;
     search?: string;
     featured?: boolean;
     newArrival?: boolean;
     bestSeller?: boolean;
+    mode?: 'all' | 'live' | 'demo';
   }): LocalProduct[] {
     let list = this.data.products.filter((p) => p.isActive);
+
+    const mode = filters?.mode || this.getDataMode();
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    if (mode === 'live') {
+      list = list.filter((p) => !isDemoItem(p));
+    } else if (mode === 'demo') {
+      list = list.filter(isDemoItem);
+    }
 
     if (filters?.category) {
       const catLower = String(filters.category).toLowerCase();
@@ -783,8 +903,15 @@ class LocalStoreManager {
     return [...list].sort((a, b) => b.id - a.id);
   }
 
-  getAllProductsAdmin(): LocalProduct[] {
-    return [...this.data.products].sort((a, b) => b.id - a.id);
+  getAllProductsAdmin(modeFilter?: 'all' | 'live' | 'demo'): LocalProduct[] {
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    let list = this.data.products;
+    if (modeFilter === 'live') {
+      list = list.filter((p) => !isDemoItem(p));
+    } else if (modeFilter === 'demo') {
+      list = list.filter(isDemoItem);
+    }
+    return [...list].sort((a, b) => b.id - a.id);
   }
 
   getProductById(id: number): LocalProduct | null {
@@ -799,6 +926,7 @@ class LocalStoreManager {
     const newId = this.data.products.reduce((max, p) => Math.max(max, p.id), 0) + 1;
     const newProduct: LocalProduct = {
       ...data,
+      isDemo: data.isDemo !== undefined ? Boolean(data.isDemo) : false,
       id: newId,
       createdAt: new Date().toISOString(),
     };

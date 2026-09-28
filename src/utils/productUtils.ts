@@ -140,6 +140,7 @@ export function sanitizeProduct(p: any): Product {
     isBestSeller: Boolean(p.isBestSeller),
     isFeatured: Boolean(p.isFeatured),
     isActive: p.isActive !== false,
+    isDemo: p.isDemo !== undefined ? Boolean(p.isDemo) : (typeof p.id === 'number' && p.id <= 8),
   };
 }
 

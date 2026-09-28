@@ -46,6 +46,7 @@ import {
   QrCode,
   Building,
   Smartphone,
+  Database,
 } from 'lucide-react';
 import {
   AdminUser,
@@ -60,6 +61,7 @@ import {
 } from '../types.ts';
 import { AdminInvoiceModal } from './AdminInvoiceModal.tsx';
 import { AdminCatalogImages } from './AdminCatalogImages.tsx';
+import { AdminDataManager } from './AdminDataManager.tsx';
 import { DeepLinkModal } from './DeepLinkModal.tsx';
 import { uploadImageToDrive, ensureDriveAuth, getAccessToken } from '../utils/imageUpload.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl, isGoogleDriveUrl } from '../utils/imageUtils.ts';
@@ -2683,6 +2685,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <span>Images & Banners</span>
               </button>
 
+              <button
+                onClick={() => setActiveTab('data_manager')}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
+                  activeTab === 'data_manager'
+                    ? 'bg-amber-600 text-white shadow-xs'
+                    : 'hover:bg-stone-800 hover:text-white text-amber-300'
+                }`}
+              >
+                <Database className="w-4 h-4 text-amber-400" />
+                <span className="font-bold">Demo Data Manager</span>
+              </button>
+
               {/* Super Admin Restricted Tabs */}
               {currentAdmin.role === 'super_admin' ? (
                 <>
@@ -3103,6 +3117,41 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </button>
                       </div>
 
+                      {/* Demo Data Quick Notice & Manager Banner */}
+                      {productsList.some((p) => p.isDemo || p.id <= 8) && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                              <Database className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold text-amber-900">
+                                  Demo Data Active ({productsList.filter((p) => p.isDemo || p.id <= 8).length} Sample Outfits)
+                                </span>
+                                <span className="bg-amber-200 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                                  Samples
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-amber-700">
+                                Aap "Demo Data Manager" se demo kapde ek click me hata sakte hain ya live mode select kar sakte hain.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('data_manager')}
+                              className="px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                            >
+                              <Database className="w-3.5 h-3.5" />
+                              <span>Open Demo Data Manager</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       {/* Hidden File Input for 1-Click Product Image Change */}
                       <input
                         type="file"
@@ -3131,6 +3180,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   }
                                 }}
                               />
+                              <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs ${
+                                p.isDemo || p.id <= 8 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                              }`}>
+                                {p.isDemo || p.id <= 8 ? '🟡 DEMO' : '🟢 LIVE'}
+                              </span>
                               <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/90 text-stone-800 text-[10px] font-bold shadow-xs">
                                 {p.category}
                               </span>
@@ -3226,6 +3280,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       products={productsList}
                       token={token}
                       onRefreshProducts={() => loadTabData('products')}
+                    />
+                  )}
+
+                  {/* TAB: DEMO DATA MANAGER & PURGE CONTROLS */}
+                  {activeTab === 'data_manager' && (
+                    <AdminDataManager
+                      token={token}
+                      products={productsList}
+                      onRefreshAll={() => {
+                        loadTabData('products');
+                        if (onProductsUpdated) onProductsUpdated();
+                      }}
                     />
                   )}
 
