@@ -1,0 +1,76 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-heading: 'Cormorant Garamond', Georgia, serif;
+    --font-body: 'Jost', sans-serif;
+  }
+
+  body {
+    font-family: var(--font-body);
+    color: #2B2320;
+    background-color: #FBF7F0;
+  }
+
+  h1, h2, h3, h4, .font-serif {
+    font-family: var(--font-heading);
+  }
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #FBF7F0;
+}
+::-webkit-scrollbar-thumb {
+  background: #E9A9BB;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #A87A2A;
+}
+
+/* Animation utilities */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-5px); }
+}
+
+.animate-float-subtle {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes whatsapp-ripple {
+  0% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.55);
+  }
+  70% {
+    transform: scale(1.02);
+    box-shadow: 0 0 0 16px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.96);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.animate-whatsapp-pulse {
+  animation: whatsapp-ripple 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes whatsapp-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  5% { transform: rotate(14deg); }
+  10% { transform: rotate(-12deg); }
+  15% { transform: rotate(8deg); }
+  20% { transform: rotate(-5deg); }
+  25% { transform: rotate(0deg); }
+}
+
+.animate-whatsapp-wiggle {
+  animation: whatsapp-wiggle 4s ease-in-out infinite;
+}

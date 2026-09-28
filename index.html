@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      // Defensive protection against environments/extensions that reassign window.fetch when it only has a getter
+      try {
+        const _origFetch = window.fetch;
+        let _customFetch = _origFetch;
+        Object.defineProperty(window, 'fetch', {
+          configurable: true,
+          enumerable: true,
+          get: function() {
+            return _customFetch || _origFetch;
+          },
+          set: function(fn) {
+            _customFetch = fn;
+          }
+        });
+      } catch (_) {}
+    </script>
+    <title>SS VASTRA | Ladies Fashion & Fabrics, Jaipur</title>
+    <meta name="description" content="SS VASTRA offers premium handcrafted ladies fashion, kurta sets, co-ord sets, anarkalis, festive fits, and Jaipuri fabrics with elegance in every thread." />
+    <meta name="keywords" content="kurta sets Jaipur, co-ord sets, anarkali dress, ladies fabrics Sanganer, ethnic wear Jaipur, SS VASTRA" />
+    <meta property="og:title" content="SS VASTRA | Ladies Fashion & Fabrics, Jaipur" />
+    <meta property="og:description" content="SS VASTRA offers premium handcrafted ladies fashion, kurta sets, co-ord sets, anarkalis, festive fits, and Jaipuri fabrics with elegance in every thread." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#FBF7F0" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="SS VASTRA" />
+    <link rel="apple-touch-icon" href="/icon.svg" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Jost:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "ClothingStore",
+      "name": "SS VASTRA",
+      "alternateName": "SS Vastra Ladies Fashion & Fabrics",
+      "description": "Elegance in Every Thread - Premium handcrafted ladies fashion, kurta sets, co-ord sets, anarkalis, and Jaipuri fabrics.",
+      "telephone": "+919783770735",
+      "email": "subhashmeena3111@gmail.com",
+      "address": {
+        "@type": "PostalAddress",
+        "streetAddress": "Green Vihar Vatika, Sanganer",
+        "addressLocality": "Jaipur",
+        "postalCode": "303905",
+        "addressRegion": "Rajasthan",
+        "addressCountry": "IN"
+      },
+      "priceRange": "₹₹",
+      "currenciesAccepted": "INR",
+      "paymentAccepted": "Cash on Delivery, UPI, Bank Transfer",
+      "url": "https://instagram.com/SS_vastra"
+    }
+    </script>
+  </head>
+  <body class="bg-[#FBF7F0] text-[#2B2320] antialiased selection:bg-[#E9A9BB]/30 selection:text-[#2B2320]">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

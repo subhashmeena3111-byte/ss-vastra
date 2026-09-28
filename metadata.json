@@ -1,0 +1,6 @@
+{
+  "name": "SS VASTRA - Ladies Fashion & Fabrics, Jaipur",
+  "description": "SS VASTRA offers premium handcrafted ladies fashion, kurta sets, co-ord sets, anarkalis, festive fits, and Jaipuri fabrics with elegance in every thread.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
