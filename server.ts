@@ -58,6 +58,10 @@ import {
   getOrderByNumber,
   createOrderRecord,
   updateOrderStatus,
+  updateOrderRecord,
+  deleteOrderRecord,
+  updateOrderShipmentRecord,
+  deleteOrderShipmentRecord,
   getAdminByLoginIdentifier,
   getAdminById,
   getAdminsList,
@@ -1789,6 +1793,308 @@ app.patch(
   }
 );
 
+// Create Manual Customer Order (Super Admin & Staff)
+app.post(
+  '/api/admin/orders/create',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const {
+        customerName,
+        customerPhone,
+        customerEmail,
+        shippingAddress,
+        city,
+        state,
+        pincode,
+        totalAmount,
+        discountAmount,
+        couponCode,
+        paymentMethod,
+        paymentStatus,
+        orderStatus,
+        notes,
+        items,
+        courierPartner,
+        trackingNumber,
+      } = req.body;
+
+      if (!customerName || !customerPhone || !shippingAddress) {
+        return res.status(400).json({
+          success: false,
+          error: 'Customer Name, Phone number aur Shipping Address zaroori hain.',
+        });
+      }
+
+      const orderNumber = `SSV-${Date.now().toString().slice(-6)}`;
+      const verifiedItems = Array.isArray(items) && items.length > 0
+        ? items.map((it: any) => ({
+            productId: it.productId || undefined,
+            productName: it.productName || it.name || 'SS Vastra Outfit',
+            productImage: it.productImage || it.image || '',
+            size: it.size || 'M',
+            quantity: Number(it.quantity) || 1,
+            unitPrice: Number(it.unitPrice || it.price) || 0,
+            totalPrice: (Number(it.unitPrice || it.price) || 0) * (Number(it.quantity) || 1),
+          }))
+        : [
+            {
+              productName: 'Custom Customer Order',
+              size: 'Free Size',
+              quantity: 1,
+              unitPrice: Number(totalAmount) || 1999,
+              totalPrice: Number(totalAmount) || 1999,
+            },
+          ];
+
+      const initialShipment = courierPartner || trackingNumber
+        ? {
+            courierPartner: courierPartner || 'Delhivery Express',
+            trackingNumber: trackingNumber || `DEL${Date.now()}`,
+            trackingUrl: `https://www.delhivery.com/track/package/${trackingNumber || ''}`,
+            estimatedDelivery: '3 to 5 Business Days',
+            events: [
+              {
+                status: orderStatus || 'Placed',
+                description: 'Order created manually by admin team',
+                location: 'Jaipur Hub',
+                timestamp: new Date().toISOString(),
+              },
+            ],
+          }
+        : undefined;
+
+      const orderData = {
+        orderNumber,
+        customerName,
+        customerPhone: String(customerPhone).replace(/\D/g, '').slice(-10),
+        customerEmail: customerEmail || '',
+        shippingAddress,
+        city: city || 'Jaipur',
+        state: state || 'Rajasthan',
+        pincode: pincode || '303905',
+        totalAmount: Number(totalAmount) || verifiedItems.reduce((s, i) => s + i.totalPrice, 0),
+        discountAmount: Number(discountAmount) || 0,
+        couponCode: couponCode || null,
+        paymentMethod: paymentMethod || 'cod',
+        paymentStatus: paymentStatus || 'pending',
+        orderStatus: orderStatus || 'Confirmed',
+        status: orderStatus || 'Confirmed',
+        notes: notes || 'Manual order created by admin',
+      };
+
+      const created = await createOrderRecord(orderData, verifiedItems, initialShipment);
+
+      localStore.addCustomerActivity({
+        type: 'order',
+        phone: orderData.customerPhone,
+        name: customerName,
+        email: customerEmail,
+        details: `Manual order created #${orderNumber} (₹${orderData.totalAmount})`,
+      });
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'CREATE_MANUAL_ORDER',
+        'order',
+        String(created.id),
+        { orderNumber, customerName, totalAmount: orderData.totalAmount }
+      );
+
+      res.json({
+        success: true,
+        message: `Order #${orderNumber} created successfully`,
+        order: created,
+      });
+    } catch (err: unknown) {
+      console.error('Create manual order error:', err);
+      res.status(500).json({ success: false, error: 'Failed to create manual order' });
+    }
+  }
+);
+
+// Update Customer Order Details (Super Admin & Staff)
+app.put(
+  '/api/admin/orders/:id',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const orderId = parseInt(req.params.id, 10);
+      const updates = req.body;
+
+      const updated = await updateOrderRecord(orderId, updates);
+      if (!updated) {
+        return res.status(404).json({ success: false, error: 'Order not found' });
+      }
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'UPDATE_ORDER_DETAILS',
+        'order',
+        String(orderId),
+        { customerName: updates.customerName, orderStatus: updates.orderStatus }
+      );
+
+      res.json({
+        success: true,
+        message: 'Order updated successfully',
+        order: updated,
+      });
+    } catch (err: unknown) {
+      console.error('Update order error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update order details' });
+    }
+  }
+);
+
+// Delete Customer Order (Super Admin & Staff)
+app.delete(
+  '/api/admin/orders/:id',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const orderId = parseInt(req.params.id, 10);
+      await deleteOrderRecord(orderId);
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'DELETE_ORDER',
+        'order',
+        String(orderId)
+      );
+
+      res.json({ success: true, message: 'Order removed successfully' });
+    } catch (err: unknown) {
+      console.error('Delete order error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete order' });
+    }
+  }
+);
+
+// Add / Update Order Tracking Details & Timeline (Super Admin & Staff)
+app.post(
+  '/api/admin/orders/:id/tracking',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const orderId = parseInt(req.params.id, 10);
+      const {
+        courierPartner,
+        trackingNumber,
+        trackingUrl,
+        estimatedDelivery,
+        status,
+        note,
+        location,
+      } = req.body;
+
+      const updated = await updateOrderShipmentRecord(orderId, {
+        courierPartner,
+        trackingNumber,
+        trackingUrl,
+        estimatedDelivery,
+        status: status || 'Shipped',
+        newEvent: note || location ? {
+          status: status || 'Shipped',
+          description: note || `Tracking updated with ${courierPartner || 'Courier'} (AWB: ${trackingNumber})`,
+          location: location || 'Sanganer, Jaipur Hub',
+        } : undefined,
+      });
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'UPDATE_ORDER_TRACKING',
+        'shipment',
+        String(orderId),
+        { courierPartner, trackingNumber }
+      );
+
+      res.json({
+        success: true,
+        message: 'Order tracking details updated successfully',
+        order: updated,
+      });
+    } catch (err: unknown) {
+      console.error('Update order tracking error:', err);
+      res.status(500).json({ success: false, error: 'Failed to update tracking details' });
+    }
+  }
+);
+
+// Remove / Clear Order Tracking Details (Super Admin & Staff)
+app.delete(
+  '/api/admin/orders/:id/tracking',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const orderId = parseInt(req.params.id, 10);
+      await deleteOrderShipmentRecord(orderId);
+
+      await logActivity(
+        req.admin!.adminId,
+        req.admin!.name,
+        'REMOVE_ORDER_TRACKING',
+        'shipment',
+        String(orderId)
+      );
+
+      res.json({ success: true, message: 'Tracking details removed successfully' });
+    } catch (err: unknown) {
+      console.error('Delete tracking error:', err);
+      res.status(500).json({ success: false, error: 'Failed to remove tracking details' });
+    }
+  }
+);
+
+// Track Website Visit (Public, Real-time)
+app.post('/api/track/visit', async (req: Request, res: Response) => {
+  try {
+    const { visitorId, page, referrer, deviceType } = req.body;
+    const clientIp = getClientIp(req);
+    const userAgent = req.headers['user-agent'] || '';
+
+    const log = localStore.addVisitorLog({
+      visitorId: visitorId || `vis_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      page: page || '/',
+      referrer: referrer || '',
+      deviceType: deviceType || (/mobile/i.test(userAgent) ? 'Mobile' : 'Desktop'),
+      ipAddress: clientIp,
+      userAgent: typeof userAgent === 'string' ? userAgent.substring(0, 150) : '',
+    });
+
+    res.json({ success: true, visitorId: log.visitorId });
+  } catch {
+    res.json({ success: true });
+  }
+});
+
+// Admin Customer Activity & Traffic Analytics (Super Admin & Staff)
+app.get(
+  '/api/admin/customer-activity',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (_req: AdminAuthRequest, res: Response) => {
+    try {
+      const summary = localStore.getCustomerActivitySummary();
+      const visitors = localStore.getVisitorLogs(80);
+      const activities = localStore.getCustomerActivities(80);
+
+      res.json({
+        success: true,
+        summary,
+        visitors,
+        activities,
+      });
+    } catch (err) {
+      console.error('Admin customer activity error:', err);
+      res.status(500).json({ success: false, error: 'Failed to load customer activity data' });
+    }
+  }
+);
+
 // Refund Order (Super Admin Only)
 app.post(
   '/api/admin/orders/:id/refund',
@@ -2120,6 +2426,9 @@ app.put(
         isSpotlight,
         isOutfit,
         isActive,
+        extraImages,
+        gallery,
+        images,
       } = req.body;
 
       const updatePayload: any = {};
@@ -2143,6 +2452,9 @@ app.put(
       if (isSpotlight !== undefined) updatePayload.isSpotlight = Boolean(isSpotlight);
       if (isOutfit !== undefined) updatePayload.isOutfit = Boolean(isOutfit);
       if (isActive !== undefined) updatePayload.isActive = Boolean(isActive);
+      if (extraImages !== undefined) updatePayload.extraImages = extraImages;
+      if (gallery !== undefined) updatePayload.gallery = gallery;
+      if (images !== undefined) updatePayload.images = images;
 
       const updated = await updateProductRecord(prodId, updatePayload);
 
@@ -3082,6 +3394,16 @@ app.post('/api/customer/send-otp', async (req: Request, res: Response) => {
 
     console.log(`[SS VASTRA OTP] 📱 Real-Time Verification Code for +91 ${cleanPhone}: [ ${otp} ] (Valid 5 mins)`);
 
+    localStore.addCustomerActivity({
+      type: 'otp_request',
+      phone: cleanPhone,
+      name,
+      email,
+      ipAddress: getClientIp(req),
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'].substring(0, 150) : '',
+      details: 'Customer requested 6-digit login verification OTP',
+    });
+
     res.json({
       success: true,
       message: `6-digit OTP sent successfully to +91 ${cleanPhone}`,
@@ -3119,11 +3441,13 @@ app.post('/api/customer/verify-otp', async (req: Request, res: Response) => {
 
     const customerName = name || record?.name || 'Valued Customer';
     const customerEmail = email || record?.email || '';
+    let isSignup = false;
 
     try {
       if (await isDbReady()) {
         const existing = await db.select().from(users).where(eq(users.phone, cleanPhone));
         if (existing.length === 0) {
+          isSignup = true;
           await db.insert(users).values({
             uid: `cust_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
             name: customerName,
@@ -3134,6 +3458,16 @@ app.post('/api/customer/verify-otp', async (req: Request, res: Response) => {
         }
       }
     } catch {}
+
+    localStore.addCustomerActivity({
+      type: isSignup ? 'signup' : 'login',
+      phone: cleanPhone,
+      name: customerName,
+      email: customerEmail,
+      ipAddress: getClientIp(req),
+      userAgent: typeof req.headers['user-agent'] === 'string' ? req.headers['user-agent'].substring(0, 150) : '',
+      details: isSignup ? 'New customer registered successfully via mobile OTP' : 'Customer logged in with mobile OTP',
+    });
 
     res.json({
       success: true,

@@ -135,6 +135,27 @@ export function App() {
     return () => window.removeEventListener('gmp-quota-exceeded', handleQuota);
   }, []);
 
+  // Website Visitor Traffic Tracking
+  useEffect(() => {
+    try {
+      let visitorId = localStorage.getItem('ss_vastra_visitor_id');
+      if (!visitorId) {
+        visitorId = `vis_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        localStorage.setItem('ss_vastra_visitor_id', visitorId);
+      }
+      fetch('/api/track/visit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          visitorId,
+          page: window.location.pathname || '/',
+          referrer: document.referrer || 'Direct Visit',
+          deviceType: window.innerWidth < 768 ? 'Mobile' : 'Desktop',
+        }),
+      }).catch(() => {});
+    } catch {}
+  }, []);
+
   // Cart State (Persisted in localStorage)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {

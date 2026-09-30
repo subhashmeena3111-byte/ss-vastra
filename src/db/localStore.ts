@@ -80,6 +80,13 @@ export interface LocalOrder {
     estimatedDelivery?: string;
     shippedAt?: string;
     deliveredAt?: string;
+    events?: Array<{
+      status: string;
+      description?: string;
+      note?: string;
+      location?: string;
+      timestamp: string;
+    }>;
   };
 }
 
@@ -118,6 +125,30 @@ export interface LocalBanner {
   displayOrder: number;
 }
 
+export interface LocalVisitorLog {
+  id: number;
+  visitorId: string;
+  ipAddress?: string;
+  userAgent?: string;
+  page: string;
+  referrer?: string;
+  deviceType?: string;
+  createdAt: string;
+}
+
+export interface LocalCustomerActivity {
+  id: number;
+  type: 'visit' | 'login' | 'signup' | 'order' | 'otp_request';
+  phone?: string;
+  email?: string;
+  name?: string;
+  ipAddress?: string;
+  userAgent?: string;
+  page?: string;
+  details?: string;
+  createdAt: string;
+}
+
 export interface LocalStoreData {
   categories: LocalCategory[];
   products: LocalProduct[];
@@ -128,6 +159,8 @@ export interface LocalStoreData {
   settings: Record<string, string>;
   deletedProductIds?: number[];
   customProducts?: LocalProduct[];
+  visitorLogs?: LocalVisitorLog[];
+  customerActivities?: LocalCustomerActivity[];
   activityLogs: Array<{
     id: number;
     adminId?: string;
@@ -446,6 +479,8 @@ function createInitialData(): LocalStoreData {
     coupons,
     banners,
     settings,
+    visitorLogs: [],
+    customerActivities: [],
     activityLogs: [],
   };
 }
@@ -482,6 +517,9 @@ class LocalStoreManager {
       parsed.products = prods;
       parsed.deletedProductIds = deletedIds;
       parsed.customProducts = customProds.filter((cp) => !deletedIds.includes(cp.id));
+      if (!Array.isArray(parsed.visitorLogs)) parsed.visitorLogs = [];
+      if (!Array.isArray(parsed.customerActivities)) parsed.customerActivities = [];
+      if (!Array.isArray(parsed.orders)) parsed.orders = [];
       return parsed as LocalStoreData;
     };
 
@@ -866,6 +904,16 @@ class LocalStoreManager {
     return this.data.orders[idx];
   }
 
+  deleteOrder(id: number): boolean {
+    const prevLen = this.data.orders.length;
+    this.data.orders = this.data.orders.filter((o) => o.id !== id);
+    if (this.data.orders.length !== prevLen) {
+      this.saveData();
+      return true;
+    }
+    return false;
+  }
+
   // Admins
   getAdmins(): LocalAdmin[] {
     try {
@@ -989,6 +1037,70 @@ class LocalStoreManager {
       this.data.activityLogs = this.data.activityLogs.slice(0, 200);
     }
     this.saveData();
+  }
+
+  // Visitor & Traffic Logs
+  getVisitorLogs(limit = 100): LocalVisitorLog[] {
+    if (!this.data.visitorLogs) this.data.visitorLogs = [];
+    return [...this.data.visitorLogs].slice(0, limit);
+  }
+
+  addVisitorLog(log: Omit<LocalVisitorLog, 'id' | 'createdAt'>): LocalVisitorLog {
+    if (!this.data.visitorLogs) this.data.visitorLogs = [];
+    const newId = this.data.visitorLogs.reduce((max, l) => Math.max(max, l.id || 0), 0) + 1;
+    const entry: LocalVisitorLog = {
+      ...log,
+      id: newId,
+      createdAt: new Date().toISOString(),
+    };
+    this.data.visitorLogs.unshift(entry);
+    if (this.data.visitorLogs.length > 500) {
+      this.data.visitorLogs = this.data.visitorLogs.slice(0, 500);
+    }
+    this.saveData();
+    return entry;
+  }
+
+  // Customer Logins & Signups Tracking
+  getCustomerActivities(limit = 100): LocalCustomerActivity[] {
+    if (!this.data.customerActivities) this.data.customerActivities = [];
+    return [...this.data.customerActivities].slice(0, limit);
+  }
+
+  addCustomerActivity(activity: Omit<LocalCustomerActivity, 'id' | 'createdAt'>): LocalCustomerActivity {
+    if (!this.data.customerActivities) this.data.customerActivities = [];
+    const newId = this.data.customerActivities.reduce((max, a) => Math.max(max, a.id || 0), 0) + 1;
+    const entry: LocalCustomerActivity = {
+      ...activity,
+      id: newId,
+      createdAt: new Date().toISOString(),
+    };
+    this.data.customerActivities.unshift(entry);
+    if (this.data.customerActivities.length > 500) {
+      this.data.customerActivities = this.data.customerActivities.slice(0, 500);
+    }
+    this.saveData();
+    return entry;
+  }
+
+  getCustomerActivitySummary() {
+    const vLogs = this.data.visitorLogs || [];
+    const cActs = this.data.customerActivities || [];
+    const today = new Date().toISOString().split('T')[0];
+
+    const todayVisits = vLogs.filter((v) => v.createdAt && v.createdAt.startsWith(today)).length;
+    const uniqueVisitors = new Set(vLogs.map((v) => v.visitorId || v.ipAddress)).size;
+    const totalSignups = cActs.filter((a) => a.type === 'signup').length;
+    const todayLogins = cActs.filter((a) => (a.type === 'login' || a.type === 'otp_request') && a.createdAt && a.createdAt.startsWith(today)).length;
+
+    return {
+      totalVisits: vLogs.length,
+      todayVisits,
+      uniqueVisitors,
+      totalSignups,
+      todayLogins,
+      totalCustomerActivities: cActs.length,
+    };
   }
 }
 

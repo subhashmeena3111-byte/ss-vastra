@@ -273,13 +273,46 @@ export async function createProductRecord(productData: any, extraImages: string[
 }
 
 export async function updateProductRecord(id: number, updates: any) {
-  localStore.updateProduct(id, updates);
+  const images = Array.isArray(updates.images)
+    ? updates.images
+    : Array.isArray(updates.gallery)
+    ? updates.gallery
+    : updates.image
+    ? [updates.image, ...(Array.isArray(updates.extraImages) ? updates.extraImages : [])]
+    : undefined;
+
+  const localUpdates = { ...updates };
+  if (images) {
+    localUpdates.images = images;
+    localUpdates.gallery = images;
+  }
+  delete localUpdates.extraImages;
+
+  localStore.updateProduct(id, localUpdates);
   triggerCloudSave();
+
   if (await isDbReady()) {
     try {
-      const res = await db.update(products).set(updates).where(eq(products.id, id)).returning();
-      const updatedItem = res[0] || { id, ...updates };
-      return formatProductRecord(updatedItem);
+      const dbUpdates: any = { ...updates };
+      delete dbUpdates.extraImages;
+      delete dbUpdates.gallery;
+      delete dbUpdates.images;
+
+      if (Object.keys(dbUpdates).length > 0) {
+        await db.update(products).set(dbUpdates).where(eq(products.id, id));
+      }
+
+      if (images && images.length > 0) {
+        await db.delete(productImages).where(eq(productImages.productId, id));
+        for (let i = 0; i < images.length; i++) {
+          await db.insert(productImages).values({
+            productId: id,
+            imageUrl: images[i],
+            displayOrder: i,
+            isMain: i === 0,
+          });
+        }
+      }
     } catch {
       markDbOffline();
     }
@@ -595,6 +628,132 @@ export async function updateOrderStatus(orderId: number, status: string, payment
       markDbOffline();
     }
   }
+}
+
+export async function updateOrderRecord(orderId: number, updates: any) {
+  const localUpdated = localStore.updateOrder(orderId, updates);
+  triggerCloudSave();
+  if (await isDbReady()) {
+    try {
+      const dbUpdates: any = {};
+      if (updates.customerName !== undefined) dbUpdates.customerName = updates.customerName;
+      if (updates.customerPhone !== undefined) dbUpdates.customerPhone = updates.customerPhone;
+      if (updates.customerEmail !== undefined) dbUpdates.customerEmail = updates.customerEmail;
+      if (updates.shippingAddress !== undefined) dbUpdates.shippingAddress = updates.shippingAddress;
+      if (updates.city !== undefined) dbUpdates.city = updates.city;
+      if (updates.state !== undefined) dbUpdates.state = updates.state;
+      if (updates.pincode !== undefined) dbUpdates.pincode = updates.pincode;
+      if (updates.totalAmount !== undefined) dbUpdates.totalAmount = updates.totalAmount;
+      if (updates.discountAmount !== undefined) dbUpdates.discountAmount = updates.discountAmount;
+      if (updates.couponCode !== undefined) dbUpdates.couponCode = updates.couponCode;
+      if (updates.paymentMethod !== undefined) dbUpdates.paymentMethod = updates.paymentMethod;
+      if (updates.paymentStatus !== undefined) dbUpdates.paymentStatus = updates.paymentStatus;
+      if (updates.orderStatus !== undefined) dbUpdates.orderStatus = updates.orderStatus;
+      if (updates.status !== undefined && !updates.orderStatus) dbUpdates.orderStatus = updates.status;
+      if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
+      dbUpdates.updatedAt = new Date();
+
+      if (Object.keys(dbUpdates).length > 0) {
+        await db.update(orders).set(dbUpdates).where(eq(orders.id, orderId));
+      }
+    } catch {
+      markDbOffline();
+    }
+  }
+  return localUpdated;
+}
+
+export async function deleteOrderRecord(orderId: number): Promise<boolean> {
+  localStore.deleteOrder(orderId);
+  triggerCloudSave();
+  if (await isDbReady()) {
+    try {
+      await db.delete(orderItems).where(eq(orderItems.orderId, orderId));
+      await db.delete(shipments).where(eq(shipments.orderId, orderId));
+      await db.delete(orders).where(eq(orders.id, orderId));
+    } catch {
+      markDbOffline();
+    }
+  }
+  return true;
+}
+
+export async function updateOrderShipmentRecord(orderId: number, shipmentUpdates: any) {
+  const currentOrder = localStore.getOrderById(orderId);
+  const existingShipment = currentOrder?.shipment || {};
+  const currentEvents = Array.isArray(existingShipment.events) ? [...existingShipment.events] : [];
+
+  if (shipmentUpdates.newEvent) {
+    currentEvents.push({
+      status: shipmentUpdates.newEvent.status || 'Updated',
+      description: shipmentUpdates.newEvent.description || shipmentUpdates.newEvent.note || '',
+      location: shipmentUpdates.newEvent.location || 'Sanganer, Jaipur Hub',
+      timestamp: new Date().toISOString(),
+    });
+  }
+
+  const mergedShipment = {
+    ...existingShipment,
+    courierPartner: shipmentUpdates.courierPartner || shipmentUpdates.courierName || existingShipment.courierPartner,
+    trackingNumber: shipmentUpdates.trackingNumber || existingShipment.trackingNumber,
+    trackingUrl: shipmentUpdates.trackingUrl !== undefined ? shipmentUpdates.trackingUrl : existingShipment.trackingUrl,
+    estimatedDelivery: shipmentUpdates.estimatedDelivery !== undefined ? shipmentUpdates.estimatedDelivery : existingShipment.estimatedDelivery,
+    events: currentEvents,
+  };
+
+  const nextStatus = shipmentUpdates.status || shipmentUpdates.orderStatus || currentOrder?.orderStatus || 'Shipped';
+
+  localStore.updateOrder(orderId, {
+    shipment: mergedShipment,
+    orderStatus: nextStatus,
+    status: nextStatus,
+  });
+  triggerCloudSave();
+
+  if (await isDbReady()) {
+    try {
+      const existing = await db.select().from(shipments).where(eq(shipments.orderId, orderId));
+      if (existing.length > 0) {
+        await db.update(shipments).set({
+          courierName: mergedShipment.courierPartner || 'Delhivery Express',
+          trackingNumber: mergedShipment.trackingNumber,
+          trackingUrl: mergedShipment.trackingUrl,
+          estimatedDelivery: mergedShipment.estimatedDelivery,
+          currentStatus: nextStatus,
+          statusUpdates: JSON.stringify(currentEvents),
+          updatedAt: new Date(),
+        }).where(eq(shipments.orderId, orderId));
+      } else {
+        await db.insert(shipments).values({
+          orderId,
+          courierName: mergedShipment.courierPartner || 'Delhivery Express',
+          trackingNumber: mergedShipment.trackingNumber || `DEL${Date.now()}`,
+          trackingUrl: mergedShipment.trackingUrl,
+          estimatedDelivery: mergedShipment.estimatedDelivery,
+          currentStatus: nextStatus,
+          statusUpdates: JSON.stringify(currentEvents),
+        });
+      }
+
+      await db.update(orders).set({ orderStatus: nextStatus, updatedAt: new Date() }).where(eq(orders.id, orderId));
+    } catch {
+      markDbOffline();
+    }
+  }
+  return localStore.getOrderById(orderId);
+}
+
+export async function deleteOrderShipmentRecord(orderId: number): Promise<boolean> {
+  localStore.updateOrder(orderId, { shipment: undefined });
+  triggerCloudSave();
+  if (await isDbReady()) {
+    try {
+      await db.delete(shipments).where(eq(shipments.orderId, orderId));
+    } catch {
+      markDbOffline();
+    }
+  }
+  return true;
 }
 
 // 7. Admins

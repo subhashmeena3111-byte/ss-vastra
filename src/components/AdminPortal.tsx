@@ -47,6 +47,11 @@ import {
   Building,
   Smartphone,
   Database,
+  Edit,
+  Activity,
+  Globe,
+  LogIn,
+  UserPlus,
 } from 'lucide-react';
 import {
   AdminUser,
@@ -192,6 +197,90 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [shipmentCourier, setShipmentCourier] = useState('Delhivery Express');
   const [shipmentTrackingNumber, setShipmentTrackingNumber] = useState('');
   const [shipmentEstimatedDate, setShipmentEstimatedDate] = useState('3-5 Business Days');
+
+  // Multi-Photo Studio (3-4 Photos) State
+  const [photoSlot1, setPhotoSlot1] = useState('');
+  const [photoSlot2, setPhotoSlot2] = useState('');
+  const [photoSlot3, setPhotoSlot3] = useState('');
+  const [photoSlot4, setPhotoSlot4] = useState('');
+  const batchPhotosInputRef = useRef<HTMLInputElement>(null);
+  const slot1InputRef = useRef<HTMLInputElement>(null);
+  const slot2InputRef = useRef<HTMLInputElement>(null);
+  const slot3InputRef = useRef<HTMLInputElement>(null);
+  const slot4InputRef = useRef<HTMLInputElement>(null);
+
+  // Manual Customer Order CRUD State
+  const [showAddOrderModal, setShowAddOrderModal] = useState(false);
+  const [editingOrderModal, setEditingOrderModal] = useState<Order | null>(null);
+  const [orderToDelete, setOrderToDelete] = useState<Order | null>(null);
+  const [isSavingOrder, setIsSavingOrder] = useState(false);
+  const [newOrderForm, setNewOrderForm] = useState({
+    customerName: '',
+    customerPhone: '',
+    customerEmail: '',
+    shippingAddress: '',
+    city: 'Jaipur',
+    state: 'Rajasthan',
+    pincode: '303905',
+    totalAmount: 1999,
+    discountAmount: 0,
+    paymentMethod: 'cod',
+    paymentStatus: 'pending',
+    orderStatus: 'Confirmed',
+    notes: '',
+    courierPartner: 'Delhivery Express',
+    trackingNumber: '',
+    itemName: 'Royal Handblock Anarkali Set',
+    itemSize: 'M',
+    itemQuantity: 1,
+    itemPrice: 1999,
+  });
+
+  // Tracking Modal & Checkpoint Event State
+  const [trackingModalOrder, setTrackingModalOrder] = useState<Order | null>(null);
+  const [trackingForm, setTrackingForm] = useState({
+    courierPartner: 'Delhivery Express',
+    trackingNumber: '',
+    trackingUrl: '',
+    estimatedDelivery: '3 to 5 Business Days',
+    status: 'Shipped',
+    newCheckpointStatus: 'In Transit',
+    newCheckpointLocation: 'Jaipur Fulfillment Center',
+    newCheckpointNote: 'Dispatched and scanned at hub',
+  });
+
+  // Customer Analytics & Traffic State
+  const [customerSubTab, setCustomerSubTab] = useState<'registered' | 'activities' | 'traffic'>('registered');
+  const [customerSearch, setCustomerSearch] = useState('');
+  const [customerActivityData, setCustomerActivityData] = useState<{
+    summary?: {
+      totalVisits: number;
+      todayVisits: number;
+      uniqueVisitors: number;
+      totalSignups: number;
+      todayLogins: number;
+      totalCustomerActivities: number;
+    };
+    visitors?: Array<{
+      id: number;
+      visitorId: string;
+      page: string;
+      referrer?: string;
+      deviceType?: string;
+      ipAddress?: string;
+      createdAt: string;
+    }>;
+    activities?: Array<{
+      id: number;
+      type: string;
+      phone?: string;
+      name?: string;
+      email?: string;
+      details?: string;
+      ipAddress?: string;
+      createdAt: string;
+    }>;
+  }>({});
 
   // Staff Account Creation Modal State
   const [showCreateStaffModal, setShowCreateStaffModal] = useState(false);
@@ -529,9 +618,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   }, [token]);
 
-  // Load Tab Data whenever activeTab changes
+  // Load Tab Data whenever activeTab changes & preload settings
   useEffect(() => {
     if (token && currentAdmin) {
+      fetch('/api/settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.settings) setSettingsMap(d.settings);
+        })
+        .catch(() => {});
       loadTabData(activeTab);
     }
   }, [activeTab, token, currentAdmin]);
@@ -940,6 +1035,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         const res = await fetch('/api/admin/customers', { headers });
         const d = await res.json();
         if (d.success) setCustomersList(d.customers);
+
+        try {
+          const actRes = await fetch('/api/admin/customer-activity', { headers });
+          const actD = await actRes.json();
+          if (actD.success) {
+            setCustomerActivityData({
+              summary: actD.summary,
+              visitors: actD.visitors,
+              activities: actD.activities,
+            });
+          }
+        } catch {}
       } else if (tab === 'coupons') {
         const res = await fetch('/api/admin/coupons', { headers });
         const d = await res.json();
@@ -952,7 +1059,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         const res = await fetch('/api/admin/staff', { headers });
         const d = await res.json();
         if (d.success) setStaffList(d.staff);
-      } else if (tab === 'settings') {
+      } else if (tab === 'settings' || tab === 'receipts') {
         const res = await fetch('/api/settings');
         const d = await res.json();
         if (d.success) setSettingsMap(d.settings);
@@ -1516,11 +1623,345 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   };
 
+  // Multi-Photo Studio Helpers (3-4 Photos)
+  const processImageFileToUrl = async (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1600;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+          const base64 = canvas.toDataURL('image/jpeg', 0.82);
+
+          try {
+            const upRes = await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: base64, fileName: file.name }),
+            });
+            const upData = await upRes.json();
+            if (upData.success && upData.url) {
+              resolve(upData.url);
+              return;
+            }
+          } catch {}
+          resolve(base64);
+        };
+        img.onerror = () => resolve(event.target?.result as string);
+        img.src = event.target?.result as string;
+      };
+      reader.onerror = () => resolve('');
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleBatchPhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    setIsUploadingProductDrive(true);
+    setDriveUploadMsg(`${files.length} photos process ho rahi hain...`);
+
+    try {
+      const urls: string[] = [];
+      for (let i = 0; i < Math.min(files.length, 4); i++) {
+        const url = await processImageFileToUrl(files[i]);
+        if (url) urls.push(url);
+      }
+
+      if (urls[0]) setPhotoSlot1(urls[0]);
+      if (urls[1]) setPhotoSlot2(urls[1]);
+      if (urls[2]) setPhotoSlot3(urls[2]);
+      if (urls[3]) setPhotoSlot4(urls[3]);
+
+      if (urls[0]) {
+        setEditingProduct((prev) => (prev ? { ...prev, image: urls[0] } : prev));
+      }
+
+      setActionMessage(`${urls.length} photos successfully attach ho gayi hain!`);
+      setTimeout(() => setActionMessage(null), 3500);
+    } catch (err: any) {
+      setActionMessage('Batch upload error: ' + (err?.message || 'Try again'));
+      setTimeout(() => setActionMessage(null), 3500);
+    } finally {
+      setIsUploadingProductDrive(false);
+      setDriveUploadMsg(null);
+      if (batchPhotosInputRef.current) batchPhotosInputRef.current.value = '';
+    }
+  };
+
+  const handleSingleSlotUpload = async (slotNumber: 1 | 2 | 3 | 4, file: File) => {
+    setIsUploadingProductDrive(true);
+    setDriveUploadMsg(`Slot ${slotNumber} photo upload ho rahi hai...`);
+    try {
+      const url = await processImageFileToUrl(file);
+      if (slotNumber === 1) {
+        setPhotoSlot1(url);
+        setEditingProduct((prev) => (prev ? { ...prev, image: url } : prev));
+      } else if (slotNumber === 2) {
+        setPhotoSlot2(url);
+      } else if (slotNumber === 3) {
+        setPhotoSlot3(url);
+      } else if (slotNumber === 4) {
+        setPhotoSlot4(url);
+      }
+      setActionMessage(`Photo slot ${slotNumber} ready!`);
+      setTimeout(() => setActionMessage(null), 3000);
+    } catch (err: any) {
+      setActionMessage('Upload error: ' + (err?.message || 'Try again'));
+      setTimeout(() => setActionMessage(null), 3000);
+    } finally {
+      setIsUploadingProductDrive(false);
+      setDriveUploadMsg(null);
+    }
+  };
+
+  const handleSwapSlotWithCover = (slotNumber: 2 | 3 | 4) => {
+    let targetSlotVal = '';
+    if (slotNumber === 2) {
+      targetSlotVal = photoSlot2;
+      setPhotoSlot2(photoSlot1);
+    } else if (slotNumber === 3) {
+      targetSlotVal = photoSlot3;
+      setPhotoSlot3(photoSlot1);
+    } else if (slotNumber === 4) {
+      targetSlotVal = photoSlot4;
+      setPhotoSlot4(photoSlot1);
+    }
+    setPhotoSlot1(targetSlotVal);
+    setEditingProduct((prev) => (prev ? { ...prev, image: targetSlotVal } : prev));
+    setActionMessage(`Slot ${slotNumber} ko Main Cover Photo bana diya gaya hai!`);
+    setTimeout(() => setActionMessage(null), 3000);
+  };
+
+  // Order CRUD Handlers
+  const handleCreateManualOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newOrderForm.customerName || !newOrderForm.customerPhone || !newOrderForm.shippingAddress) {
+      setActionMessage('Customer Name, Phone number aur Address bharna zaroori hai.');
+      setTimeout(() => setActionMessage(null), 3500);
+      return;
+    }
+
+    setIsSavingOrder(true);
+    try {
+      const payload = {
+        customerName: newOrderForm.customerName,
+        customerPhone: newOrderForm.customerPhone,
+        customerEmail: newOrderForm.customerEmail,
+        shippingAddress: newOrderForm.shippingAddress,
+        city: newOrderForm.city,
+        state: newOrderForm.state,
+        pincode: newOrderForm.pincode,
+        totalAmount: Number(newOrderForm.totalAmount),
+        discountAmount: Number(newOrderForm.discountAmount) || 0,
+        paymentMethod: newOrderForm.paymentMethod,
+        paymentStatus: newOrderForm.paymentStatus,
+        orderStatus: newOrderForm.orderStatus,
+        notes: newOrderForm.notes,
+        courierPartner: newOrderForm.courierPartner,
+        trackingNumber: newOrderForm.trackingNumber,
+        items: [
+          {
+            productName: newOrderForm.itemName || 'Custom SS Vastra Outfit',
+            size: newOrderForm.itemSize || 'M',
+            quantity: Number(newOrderForm.itemQuantity) || 1,
+            unitPrice: Number(newOrderForm.itemPrice) || Number(newOrderForm.totalAmount),
+            totalPrice: Number(newOrderForm.totalAmount),
+          },
+        ],
+      };
+
+      const res = await fetch('/api/admin/orders/create', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionMessage(data.message || 'Customer order created successfully!');
+        setTimeout(() => setActionMessage(null), 3500);
+        setShowAddOrderModal(false);
+        loadTabData('orders');
+      } else {
+        setActionMessage(data.error || 'Failed to create order');
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setActionMessage('Error creating order: ' + (err?.message || 'Server error'));
+      setTimeout(() => setActionMessage(null), 4000);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  const handleUpdateOrderDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingOrderModal) return;
+
+    setIsSavingOrder(true);
+    try {
+      const res = await fetch(`/api/admin/orders/${editingOrderModal.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(editingOrderModal),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionMessage('Order details updated successfully!');
+        setTimeout(() => setActionMessage(null), 3500);
+        setEditingOrderModal(null);
+        loadTabData('orders');
+      } else {
+        setActionMessage(data.error || 'Failed to update order');
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setActionMessage('Error updating order: ' + (err?.message || 'Server error'));
+      setTimeout(() => setActionMessage(null), 4000);
+    } finally {
+      setIsSavingOrder(false);
+    }
+  };
+
+  const executeDeleteOrder = async (orderId: number) => {
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionMessage('Order permanently removed.');
+        setTimeout(() => setActionMessage(null), 3500);
+        setOrderToDelete(null);
+        loadTabData('orders');
+      } else {
+        setActionMessage(data.error || 'Failed to delete order');
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setActionMessage('Error deleting order: ' + (err?.message || 'Server error'));
+      setTimeout(() => setActionMessage(null), 4000);
+    }
+  };
+
+  // Tracking Management Handlers
+  const handleOpenTrackingModal = (ord: Order) => {
+    setTrackingModalOrder(ord);
+    const ship = (ord as any).shipment || {};
+    setTrackingForm({
+      courierPartner: ship.courierPartner || ship.courierName || 'Delhivery Express',
+      trackingNumber: ship.trackingNumber || ord.trackingNumber || '',
+      trackingUrl: ship.trackingUrl || (ship.trackingNumber ? `https://www.delhivery.com/track/package/${ship.trackingNumber}` : ''),
+      estimatedDelivery: ship.estimatedDelivery || '3 to 5 Business Days',
+      status: ord.orderStatus || 'Shipped',
+      newCheckpointStatus: 'In Transit',
+      newCheckpointLocation: 'Jaipur Fulfillment Hub',
+      newCheckpointNote: `Order dispatched via ${ship.courierPartner || 'Delhivery Express'}`,
+    });
+  };
+
+  const handleSaveTrackingDetails = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!trackingModalOrder) return;
+
+    try {
+      const res = await fetch(`/api/admin/orders/${trackingModalOrder.id}/tracking`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          courierPartner: trackingForm.courierPartner,
+          trackingNumber: trackingForm.trackingNumber,
+          trackingUrl: trackingForm.trackingUrl,
+          estimatedDelivery: trackingForm.estimatedDelivery,
+          status: trackingForm.status,
+          note: trackingForm.newCheckpointNote,
+          location: trackingForm.newCheckpointLocation,
+        }),
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionMessage('Tracking and shipment details updated successfully!');
+        setTimeout(() => setActionMessage(null), 3500);
+        setTrackingModalOrder(null);
+        loadTabData('orders');
+      } else {
+        setActionMessage(data.error || 'Failed to update tracking');
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setActionMessage('Error updating tracking: ' + (err?.message || 'Server error'));
+      setTimeout(() => setActionMessage(null), 4000);
+    }
+  };
+
+  const handleRemoveTracking = async (orderId: number) => {
+    if (!confirm('Kya aap is order ki tracking details remove karna chahte hain?')) return;
+
+    try {
+      const res = await fetch(`/api/admin/orders/${orderId}/tracking`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setActionMessage('Order tracking details removed successfully.');
+        setTimeout(() => setActionMessage(null), 3500);
+        setTrackingModalOrder(null);
+        loadTabData('orders');
+      } else {
+        setActionMessage(data.error || 'Failed to remove tracking');
+        setTimeout(() => setActionMessage(null), 4000);
+      }
+    } catch (err: any) {
+      setActionMessage('Error removing tracking: ' + (err?.message || 'Server error'));
+      setTimeout(() => setActionMessage(null), 4000);
+    }
+  };
+
   // Product Actions
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingProduct?.name || !editingProduct?.price || !editingProduct?.image) {
-      setActionMessage('Kripya Product Title, Price, aur Photo daalein.');
+    const finalCover = photoSlot1 || photoSlot2 || photoSlot3 || photoSlot4 || editingProduct?.image || '';
+    if (!editingProduct?.name || !editingProduct?.price || !finalCover) {
+      setActionMessage('Kripya Product Title, Price, aur Photo (Slot 1) daalein.');
       setTimeout(() => setActionMessage(null), 3500);
       return;
     }
@@ -1530,9 +1971,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       const url = isNew ? '/api/admin/products' : `/api/admin/products/${editingProduct.id}`;
       const method = isNew ? 'POST' : 'PUT';
 
+      const allSlots = [photoSlot1, photoSlot2, photoSlot3, photoSlot4].filter(Boolean);
+      const extraSlots = [photoSlot2, photoSlot3, photoSlot4].filter(Boolean);
+
       const sanitizedProduct = {
         ...editingProduct,
-        image: normalizeProductImageUrl(editingProduct.image),
+        image: normalizeProductImageUrl(finalCover),
+        gallery: allSlots.length > 0 ? allSlots : [finalCover],
+        images: allSlots.length > 0 ? allSlots : [finalCover],
+        extraImages: extraSlots,
       };
 
       const res = await fetch(url, {
@@ -3027,22 +3474,60 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   {/* TAB 2: ORDERS MANAGEMENT */}
                   {activeTab === 'orders' && (
                     <div className="space-y-4">
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                         <div>
-                          <h2 className="font-serif text-2xl font-bold text-[#2B2320]">
-                            Customer Orders
-                          </h2>
+                          <div className="flex items-center gap-2">
+                            <h2 className="font-serif text-2xl font-bold text-[#2B2320]">
+                              Customer Orders & Fulfillment
+                            </h2>
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#A87A2A]/10 text-[#A87A2A] border border-[#A87A2A]/20">
+                              {ordersList.length} Orders
+                            </span>
+                          </div>
                           <p className="text-xs text-stone-500">
-                            Update order statuses, assign tracking details, and manage fulfillment.
+                            Add manual customer orders, update delivery statuses, manage live courier tracking, or remove orders.
                           </p>
                         </div>
-                        <button
-                          onClick={() => loadTabData('orders')}
-                          className="p-2 rounded-xl bg-white border border-stone-200 text-stone-600 hover:text-[#A87A2A] text-xs font-semibold shadow-xs"
-                          title="Refresh"
-                        >
-                          <RefreshCw className="w-4 h-4" />
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNewOrderForm({
+                                customerName: '',
+                                customerPhone: '',
+                                customerEmail: '',
+                                shippingAddress: '',
+                                city: 'Jaipur',
+                                state: 'Rajasthan',
+                                pincode: '303905',
+                                totalAmount: 1999,
+                                discountAmount: 0,
+                                paymentMethod: 'cod',
+                                paymentStatus: 'pending',
+                                orderStatus: 'Confirmed',
+                                notes: '',
+                                courierPartner: 'Delhivery Express',
+                                trackingNumber: '',
+                                itemName: 'Royal Handblock Anarkali Set',
+                                itemSize: 'M',
+                                itemQuantity: 1,
+                                itemPrice: 1999,
+                              });
+                              setShowAddOrderModal(true);
+                            }}
+                            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>+ Add Customer Order</span>
+                          </button>
+                          <button
+                            onClick={() => loadTabData('orders')}
+                            className="p-2 rounded-xl bg-white border border-stone-200 text-stone-600 hover:text-[#A87A2A] text-xs font-semibold shadow-xs"
+                            title="Refresh"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                        </div>
                       </div>
 
                       <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
@@ -3058,100 +3543,137 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-stone-100">
-                            {ordersList.map((ord) => (
-                              <tr key={ord.id} className="hover:bg-stone-50">
-                                <td className="p-3 font-mono font-bold text-stone-800">
-                                  #{ord.orderNumber}
-                                </td>
-                                <td className="p-3">
-                                  <span className="font-semibold block">{ord.customerName}</span>
-                                  <span className="text-stone-400 text-[11px] block">{ord.customerPhone}</span>
-                                </td>
-                                <td className="p-3 font-bold text-stone-900">
-                                  ₹{ord.totalAmount}
-                                </td>
-                                <td className="p-3">
-                                  <div className="flex flex-col gap-1 items-start">
-                                    <div className="flex items-center gap-1.5">
-                                      <span
-                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                          ord.paymentStatus === 'paid'
-                                            ? 'bg-emerald-100 text-emerald-800'
-                                            : 'bg-amber-100 text-amber-800'
-                                        }`}
-                                      >
-                                        {ord.paymentStatus}
+                            {ordersList.map((ord) => {
+                              const ship = (ord as any).shipment;
+                              const hasTracking = ship && ship.trackingNumber;
+                              return (
+                                <tr key={ord.id} className="hover:bg-stone-50">
+                                  <td className="p-3 font-mono">
+                                    <span className="font-bold text-stone-800 block">#{ord.orderNumber}</span>
+                                    <span className="text-[10px] text-stone-400 block">
+                                      {ord.createdAt ? new Date(ord.createdAt).toLocaleDateString('en-IN') : 'Recent'}
+                                    </span>
+                                    {hasTracking && (
+                                      <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 rounded-md bg-blue-50 text-blue-700 font-mono text-[9px] font-bold border border-blue-200/60">
+                                        <Truck className="w-2.5 h-2.5" />
+                                        {ship.courierPartner || 'Courier'}: {ship.trackingNumber}
                                       </span>
-                                      {ord.paymentStatus !== 'paid' && (
-                                        <button
-                                          onClick={() => handleUpdatePaymentStatus(ord.id, 'paid')}
-                                          className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer"
-                                          title="Verify & Mark Payment Received"
+                                    )}
+                                  </td>
+                                  <td className="p-3">
+                                    <span className="font-semibold block">{ord.customerName}</span>
+                                    <span className="text-stone-400 text-[11px] block">{ord.customerPhone}</span>
+                                    {ord.city && (
+                                      <span className="text-stone-400 text-[10px] block">{ord.city}, {ord.state || 'RJ'}</span>
+                                    )}
+                                  </td>
+                                  <td className="p-3 font-bold text-stone-900">
+                                    ₹{ord.totalAmount}
+                                  </td>
+                                  <td className="p-3">
+                                    <div className="flex flex-col gap-1 items-start">
+                                      <div className="flex items-center gap-1.5">
+                                        <span
+                                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                            ord.paymentStatus === 'paid'
+                                              ? 'bg-emerald-100 text-emerald-800'
+                                              : 'bg-amber-100 text-amber-800'
+                                          }`}
                                         >
-                                          Mark Paid
+                                          {ord.paymentStatus}
+                                        </span>
+                                        {ord.paymentStatus !== 'paid' && (
+                                          <button
+                                            onClick={() => handleUpdatePaymentStatus(ord.id, 'paid')}
+                                            className="text-[10px] text-emerald-700 hover:text-emerald-900 font-bold underline cursor-pointer"
+                                            title="Verify & Mark Payment Received"
+                                          >
+                                            Mark Paid
+                                          </button>
+                                        )}
+                                      </div>
+                                      <span className="text-[10px] text-stone-500 font-medium">
+                                        {ord.paymentMethod === 'cod'
+                                          ? '💵 Cash on Delivery'
+                                          : ord.paymentMethod === 'upi'
+                                          ? '📱 Direct UPI'
+                                          : ord.paymentMethod === 'bank_transfer'
+                                          ? '🏦 Bank Transfer'
+                                          : '💳 Razorpay Gateway'}
+                                      </span>
+                                    </div>
+                                  </td>
+                                  <td className="p-3">
+                                    <select
+                                      value={ord.orderStatus}
+                                      onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
+                                      className="px-2 py-1 rounded-lg border border-stone-300 font-medium text-xs bg-white focus:outline-none focus:border-[#A87A2A]"
+                                    >
+                                      <option value="Placed">Placed</option>
+                                      <option value="Confirmed">Confirmed</option>
+                                      <option value="Processing">Processing</option>
+                                      <option value="Packed">Packed</option>
+                                      <option value="Shipped">Shipped</option>
+                                      <option value="Out for Delivery">Out for Delivery</option>
+                                      <option value="Delivered">Delivered</option>
+                                      <option value="Cancelled">Cancelled</option>
+                                      <option value="Returned">Returned</option>
+                                    </select>
+                                  </td>
+                                  <td className="p-3 text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleOpenTrackingModal(ord)}
+                                        className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 text-[#A87A2A] font-semibold text-[11px] flex items-center gap-1 border border-amber-200/60"
+                                        title="Manage Courier Tracking & Live Timeline"
+                                      >
+                                        <Truck className="w-3.5 h-3.5" />
+                                        <span>Tracking</span>
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setEditingOrderModal(ord)}
+                                        className="p-1 rounded-lg hover:bg-stone-200 text-stone-700"
+                                        title="Edit Order Details & Customer Info"
+                                      >
+                                        <Edit className="w-3.5 h-3.5" />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        onClick={() => setPrintingOrder(ord)}
+                                        className="p-1 rounded-lg hover:bg-stone-200 text-stone-700"
+                                        title="Print Tax Invoice & Shipping Label"
+                                      >
+                                        <Receipt className="w-3.5 h-3.5" />
+                                      </button>
+
+                                      {currentAdmin?.role === 'super_admin' && ord.paymentStatus === 'paid' && (
+                                        <button
+                                          type="button"
+                                          onClick={() => handleRefundOrder(ord.id, ord.totalAmount)}
+                                          className="p-1 rounded-lg hover:bg-rose-50 text-rose-600"
+                                          title="Issue Refund (Super Admin)"
+                                        >
+                                          <RotateCcw className="w-3.5 h-3.5" />
                                         </button>
                                       )}
-                                    </div>
-                                    <span className="text-[10px] text-stone-500 font-medium">
-                                      {ord.paymentMethod === 'cod'
-                                        ? '💵 Cash on Delivery'
-                                        : ord.paymentMethod === 'upi'
-                                        ? '📱 Direct UPI'
-                                        : ord.paymentMethod === 'bank_transfer'
-                                        ? '🏦 Bank Transfer'
-                                        : '💳 Razorpay Gateway'}
-                                    </span>
-                                  </div>
-                                </td>
-                                <td className="p-3">
-                                  <select
-                                    value={ord.orderStatus}
-                                    onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
-                                    className="px-2 py-1 rounded-lg border border-stone-300 font-medium text-xs bg-white focus:outline-none focus:border-[#A87A2A]"
-                                  >
-                                    <option value="Confirmed">Confirmed</option>
-                                    <option value="Processing">Processing</option>
-                                    <option value="Packed">Packed</option>
-                                    <option value="Shipped">Shipped</option>
-                                    <option value="Delivered">Delivered</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                  </select>
-                                </td>
-                                <td className="p-3 text-right">
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    <button
-                                      onClick={() => {
-                                        setSelectedOrder(ord);
-                                        setShipmentTrackingNumber(ord.trackingNumber || '');
-                                      }}
-                                      className="px-2.5 py-1 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold text-[11px] flex items-center gap-1"
-                                      title="Add/Update Courier Tracking"
-                                    >
-                                      <Truck className="w-3.5 h-3.5 text-[#A87A2A]" />
-                                      <span>Dispatch</span>
-                                    </button>
 
-                                    <button
-                                      onClick={() => setPrintingOrder(ord)}
-                                      className="p-1 rounded-lg hover:bg-stone-200 text-stone-700"
-                                      title="Print Tax Invoice & Shipping Label"
-                                    >
-                                      <Receipt className="w-3.5 h-3.5" />
-                                    </button>
-
-                                    {currentAdmin?.role === 'super_admin' && ord.paymentStatus === 'paid' && (
                                       <button
-                                        onClick={() => handleRefundOrder(ord.id, ord.totalAmount)}
+                                        type="button"
+                                        onClick={() => setOrderToDelete(ord)}
                                         className="p-1 rounded-lg hover:bg-rose-50 text-rose-600"
-                                        title="Issue Refund (Super Admin)"
+                                        title="Remove / Delete Order"
                                       >
-                                        <RotateCcw className="w-3.5 h-3.5" />
+                                        <Trash2 className="w-3.5 h-3.5" />
                                       </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            ))}
+                                    </div>
+                                  </td>
+                                </tr>
+                              );
+                            })}
                           </tbody>
                         </table>
                       </div>
@@ -3973,34 +4495,318 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     </div>
                   )}
 
-                  {/* TAB 6: CUSTOMERS (SUPER ADMIN ONLY) */}
+                  {/* TAB 6: CUSTOMERS & TRAFFIC ANALYTICS (SUPER ADMIN ONLY) */}
                   {activeTab === 'customers' && currentAdmin.role === 'super_admin' && (
-                    <div className="space-y-4">
-                      <h2 className="font-serif text-2xl font-bold text-[#2B2320]">
-                        Registered Customers
-                      </h2>
-                      <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-[#FBF7F0] border-b border-stone-200 text-stone-600 uppercase font-semibold">
-                            <tr>
-                              <th className="p-3">Customer</th>
-                              <th className="p-3">Phone</th>
-                              <th className="p-3">Orders</th>
-                              <th className="p-3">Total Spend</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-stone-100">
-                            {customersList.map((c, i) => (
-                              <tr key={i} className="hover:bg-stone-50">
-                                <td className="p-3 font-semibold text-stone-800">{String(c.name || 'Shopper')}</td>
-                                <td className="p-3 font-mono text-stone-600">{String(c.phone || '-')}</td>
-                                <td className="p-3">{String(c.ordersCount || 0)} orders</td>
-                                <td className="p-3 font-bold text-[#A87A2A]">₹{String(c.totalSpent || 0)}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    <div className="space-y-5 animate-in fade-in">
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="font-serif text-2xl font-bold text-[#2B2320]">
+                              Customers & Traffic Intelligence
+                            </h2>
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#A87A2A]/10 text-[#A87A2A] border border-[#A87A2A]/20">
+                              Real-Time Tracking
+                            </span>
+                          </div>
+                          <p className="text-xs text-stone-500">
+                            Monitor registered shoppers, live website visits, user devices, and login/signup authentication events.
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => loadTabData('customers')}
+                          className="self-start sm:self-auto p-2 rounded-xl bg-white border border-stone-200 text-stone-600 hover:text-[#A87A2A] text-xs font-semibold shadow-xs"
+                          title="Refresh Traffic Data"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                        </button>
                       </div>
+
+                      {/* Overview Metrics Cards */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+                        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs">
+                          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                            Registered Customers
+                          </span>
+                          <span className="font-serif text-2xl font-bold text-[#2B2320] block mt-1">
+                            {customersList.length}
+                          </span>
+                          <span className="text-[10px] text-stone-400 mt-1 block">
+                            Verified shoppers with accounts
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs">
+                          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                            Total Website Visits
+                          </span>
+                          <span className="font-serif text-2xl font-bold text-[#A87A2A] block mt-1">
+                            {customerActivityData.summary?.totalVisits ?? (customerActivityData.visitors?.length || 0)}
+                          </span>
+                          <span className="text-[10px] text-stone-400 mt-1 block">
+                            {customerActivityData.summary?.uniqueVisitors || 0} unique visitors
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs">
+                          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                            Today's Site Traffic
+                          </span>
+                          <span className="font-serif text-2xl font-bold text-emerald-700 block mt-1">
+                            {customerActivityData.summary?.todayVisits || 0}
+                          </span>
+                          <span className="text-[10px] text-stone-400 mt-1 block">
+                            Page views recorded today
+                          </span>
+                        </div>
+
+                        <div className="p-4 rounded-2xl bg-white border border-stone-200 shadow-2xs">
+                          <span className="text-[11px] font-bold text-stone-500 uppercase tracking-wider block">
+                            Logins & Signups
+                          </span>
+                          <span className="font-serif text-2xl font-bold text-blue-700 block mt-1">
+                            {customerActivityData.activities?.length || 0}
+                          </span>
+                          <span className="text-[10px] text-stone-400 mt-1 block">
+                            {customerActivityData.summary?.todayLogins || 0} active today
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Sub-Tab Navigation & Filter */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-200 pb-2">
+                        <div className="flex items-center gap-2 overflow-x-auto">
+                          <button
+                            type="button"
+                            onClick={() => setCustomerSubTab('registered')}
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                              customerSubTab === 'registered'
+                                ? 'bg-[#A87A2A] text-white shadow-xs'
+                                : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                            }`}
+                          >
+                            <Users className="w-3.5 h-3.5" />
+                            <span>Registered Shoppers ({customersList.length})</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setCustomerSubTab('activities')}
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                              customerSubTab === 'activities'
+                                ? 'bg-[#A87A2A] text-white shadow-xs'
+                                : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                            }`}
+                          >
+                            <LogIn className="w-3.5 h-3.5" />
+                            <span>Logins & Signups ({customerActivityData.activities?.length || 0})</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setCustomerSubTab('traffic')}
+                            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition-colors whitespace-nowrap cursor-pointer ${
+                              customerSubTab === 'traffic'
+                                ? 'bg-[#A87A2A] text-white shadow-xs'
+                                : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                            }`}
+                          >
+                            <Globe className="w-3.5 h-3.5" />
+                            <span>Website Traffic ({customerActivityData.visitors?.length || 0})</span>
+                          </button>
+                        </div>
+
+                        {/* Search Filter */}
+                        <div className="w-full sm:w-64">
+                          <input
+                            type="text"
+                            placeholder="Search by name, phone, IP..."
+                            value={customerSearch}
+                            onChange={(e) => setCustomerSearch(e.target.value)}
+                            className="w-full px-3 py-1.5 rounded-xl border border-stone-300 text-xs bg-white focus:outline-none focus:border-[#A87A2A]"
+                          />
+                        </div>
+                      </div>
+
+                      {/* SUB-VIEW 1: REGISTERED CUSTOMERS */}
+                      {customerSubTab === 'registered' && (
+                        <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-[#FBF7F0] border-b border-stone-200 text-stone-600 uppercase font-semibold">
+                              <tr>
+                                <th className="p-3">Customer</th>
+                                <th className="p-3">Phone</th>
+                                <th className="p-3">Orders</th>
+                                <th className="p-3">Total Spend</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-100">
+                              {customersList
+                                .filter((c) => {
+                                  if (!customerSearch.trim()) return true;
+                                  const q = customerSearch.toLowerCase();
+                                  return (
+                                    (c.name && c.name.toLowerCase().includes(q)) ||
+                                    (c.phone && c.phone.includes(q))
+                                  );
+                                })
+                                .map((c, i) => (
+                                  <tr key={i} className="hover:bg-stone-50">
+                                    <td className="p-3">
+                                      <span className="font-semibold text-stone-800 block">{String(c.name || 'Shopper')}</span>
+                                    </td>
+                                    <td className="p-3 font-mono text-stone-600">{String(c.phone || '-')}</td>
+                                    <td className="p-3">
+                                      <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 text-[11px] font-semibold">
+                                        {String(c.ordersCount || 0)} orders
+                                      </span>
+                                    </td>
+                                    <td className="p-3 font-bold text-[#A87A2A]">₹{String(c.totalSpent || 0)}</td>
+                                  </tr>
+                                ))}
+                              {customersList.length === 0 && (
+                                <tr>
+                                  <td colSpan={4} className="p-8 text-center text-stone-400">
+                                    Abhi tak koi registered customer record nahi mila.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* SUB-VIEW 2: LOGINS & SIGNUPS ACTIVITY FEED */}
+                      {customerSubTab === 'activities' && (
+                        <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-[#FBF7F0] border-b border-stone-200 text-stone-600 uppercase font-semibold">
+                              <tr>
+                                <th className="p-3">Time</th>
+                                <th className="p-3">Event Type</th>
+                                <th className="p-3">Phone / Customer</th>
+                                <th className="p-3">Client IP</th>
+                                <th className="p-3">Details</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-100">
+                              {(customerActivityData.activities || [])
+                                .filter((a) => {
+                                  if (!customerSearch.trim()) return true;
+                                  const q = customerSearch.toLowerCase();
+                                  return (
+                                    (a.phone && a.phone.includes(q)) ||
+                                    (a.name && a.name.toLowerCase().includes(q)) ||
+                                    (a.type && a.type.toLowerCase().includes(q)) ||
+                                    (a.ipAddress && a.ipAddress.includes(q))
+                                  );
+                                })
+                                .map((act) => (
+                                  <tr key={act.id} className="hover:bg-stone-50">
+                                    <td className="p-3 font-mono text-[11px] text-stone-500 whitespace-nowrap">
+                                      {act.createdAt ? new Date(act.createdAt).toLocaleString('en-IN') : '-'}
+                                    </td>
+                                    <td className="p-3">
+                                      <span
+                                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                          act.type === 'signup'
+                                            ? 'bg-purple-100 text-purple-800'
+                                            : act.type === 'login'
+                                            ? 'bg-emerald-100 text-emerald-800'
+                                            : act.type === 'order'
+                                            ? 'bg-amber-100 text-amber-800'
+                                            : 'bg-blue-100 text-blue-800'
+                                        }`}
+                                      >
+                                        {act.type}
+                                      </span>
+                                    </td>
+                                    <td className="p-3">
+                                      <span className="font-semibold text-stone-800 block">{act.name || 'Shopper'}</span>
+                                      <span className="font-mono text-stone-400 text-[11px] block">{act.phone ? `+91 ${act.phone}` : '-'}</span>
+                                    </td>
+                                    <td className="p-3 font-mono text-stone-500 text-[11px]">
+                                      {act.ipAddress || '127.0.0.1'}
+                                    </td>
+                                    <td className="p-3 text-stone-600">
+                                      {act.details || '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              {(!customerActivityData.activities || customerActivityData.activities.length === 0) && (
+                                <tr>
+                                  <td colSpan={5} className="p-8 text-center text-stone-400">
+                                    Koi customer login/signup activity record nahi hui hai abhi tak.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+
+                      {/* SUB-VIEW 3: WEBSITE VISITOR TRAFFIC LOGS */}
+                      {customerSubTab === 'traffic' && (
+                        <div className="bg-white rounded-2xl border border-stone-200 overflow-hidden shadow-xs">
+                          <table className="w-full text-left text-xs">
+                            <thead className="bg-[#FBF7F0] border-b border-stone-200 text-stone-600 uppercase font-semibold">
+                              <tr>
+                                <th className="p-3">Time</th>
+                                <th className="p-3">Visitor ID</th>
+                                <th className="p-3">Page Visited</th>
+                                <th className="p-3">Device / Platform</th>
+                                <th className="p-3">Referrer / Source</th>
+                                <th className="p-3">Client IP</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-stone-100">
+                              {(customerActivityData.visitors || [])
+                                .filter((v) => {
+                                  if (!customerSearch.trim()) return true;
+                                  const q = customerSearch.toLowerCase();
+                                  return (
+                                    (v.visitorId && v.visitorId.toLowerCase().includes(q)) ||
+                                    (v.page && v.page.toLowerCase().includes(q)) ||
+                                    (v.ipAddress && v.ipAddress.includes(q)) ||
+                                    (v.deviceType && v.deviceType.toLowerCase().includes(q))
+                                  );
+                                })
+                                .map((vis) => (
+                                  <tr key={vis.id} className="hover:bg-stone-50">
+                                    <td className="p-3 font-mono text-[11px] text-stone-500 whitespace-nowrap">
+                                      {vis.createdAt ? new Date(vis.createdAt).toLocaleString('en-IN') : '-'}
+                                    </td>
+                                    <td className="p-3 font-mono text-stone-700 text-[11px]">
+                                      {vis.visitorId}
+                                    </td>
+                                    <td className="p-3 font-mono text-stone-800 font-semibold">
+                                      {vis.page || '/'}
+                                    </td>
+                                    <td className="p-3">
+                                      <span className="px-2 py-0.5 rounded-full bg-stone-100 text-stone-700 text-[10px] font-bold">
+                                        {vis.deviceType || 'Desktop'}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 text-stone-500 truncate max-w-xs">
+                                      {vis.referrer || 'Direct Visit'}
+                                    </td>
+                                    <td className="p-3 font-mono text-stone-400 text-[11px]">
+                                      {vis.ipAddress || '127.0.0.1'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              {(!customerActivityData.visitors || customerActivityData.visitors.length === 0) && (
+                                <tr>
+                                  <td colSpan={6} className="p-8 text-center text-stone-400">
+                                    Koi visitor session log abhi tak record nahi hua hai.
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -5279,6 +6085,63 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             />
                           </div>
 
+                          {/* GST & Legal Business Identification */}
+                          <div className="pt-3 border-t border-stone-100">
+                            <div className="flex items-center gap-2 mb-3">
+                              <span className="font-serif font-bold text-stone-800 text-sm">
+                                GST & Business Tax Identification
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#F7E3E8] text-[#A87A2A] border border-[#E9A9BB]/60">
+                                Invoices & Bills
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                              <div>
+                                <label className="block font-semibold text-stone-700 mb-1">
+                                  GSTIN (GST Number)
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. 08AAAAA0000A1Z5"
+                                  value={settingsMap['invoice_gstin'] || ''}
+                                  onChange={(e) => setSettingsMap({ ...settingsMap, invoice_gstin: e.target.value.toUpperCase() })}
+                                  className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono focus:outline-none focus:border-[#A87A2A]"
+                                />
+                                <p className="text-[10px] text-stone-400 mt-1">Ye number tax invoices aur customer bills par print hoga.</p>
+                              </div>
+
+                              <div>
+                                <label className="block font-semibold text-stone-700 mb-1">
+                                  MSME / Udyam Registration No.
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g. UDYAM-RJ-17-0012345"
+                                  value={settingsMap['invoice_msme'] || ''}
+                                  onChange={(e) => setSettingsMap({ ...settingsMap, invoice_msme: e.target.value.toUpperCase() })}
+                                  className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono focus:outline-none focus:border-[#A87A2A]"
+                                />
+                                <p className="text-[10px] text-stone-400 mt-1">Udyam / MSME registration number for official receipts.</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 p-3 bg-amber-50/70 border border-amber-200/60 rounded-xl flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                <Receipt className="w-4 h-4 text-[#A87A2A] shrink-0" />
+                                <span className="text-[11px] text-amber-900 font-medium">
+                                  Full invoice templates, receipt logo & billing controls "Invoices & Receipts" tab me bhi available hain.
+                                </span>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => setActiveTab('receipts')}
+                                className="px-3 py-1 bg-[#A87A2A] text-white text-[11px] font-bold rounded-lg hover:bg-[#8e6520] transition-colors shrink-0"
+                              >
+                                Open Invoices & Receipts
+                              </button>
+                            </div>
+                          </div>
+
                           <button
                             type="submit"
                             className="px-6 py-2.5 rounded-xl bg-[#A87A2A] text-white font-bold text-xs hover:bg-[#8e6520] transition-colors shadow-sm"
@@ -5523,7 +6386,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         {/* Modal: Edit / Add Product */}
         {editingProduct && (
           <div className="absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-4 backdrop-blur-xs">
-            <div className="w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-stone-200 max-h-[85vh] overflow-y-auto">
+            <div className="w-full max-w-2xl bg-white rounded-3xl p-6 shadow-2xl border border-stone-200 max-h-[88vh] overflow-y-auto">
               <div className="flex items-center justify-between pb-3 border-b border-stone-100 mb-4">
                 <h3 className="font-serif text-lg font-bold text-[#2B2320]">
                   {isCreatingProduct ? 'Create New Outfit' : 'Edit Product'}
@@ -5600,146 +6463,331 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   </div>
                 </div>
 
-                {/* Product Image Selection & Google Drive Direct Upload */}
-                <div className="p-3.5 bg-[#FBF7F0] border-2 border-stone-200 rounded-2xl space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-[#2B2320]">
-                      Product Image (Photo Upload & Sync) *
-                    </label>
-                    <span className="text-[10px] text-[#A87A2A] font-semibold flex items-center gap-1">
-                      <HardDrive className="w-3.5 h-3.5" />
-                      Drive & Device Support
-                    </span>
-                  </div>
-
-                  {/* Upload via Local Device or Google Drive */}
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      {/* Option A: Direct Device Upload */}
-                      <input
-                        type="file"
-                        ref={productModalLocalFileInputRef}
-                        accept="image/*"
-                        onChange={handleProductModalLocalUpload}
-                        disabled={isUploadingProductDrive}
-                        className="hidden"
-                        id="product-modal-local-upload"
-                      />
-                      <label
-                        htmlFor="product-modal-local-upload"
-                        className={`px-3.5 py-2 bg-[#2B2320] hover:bg-stone-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 ${
-                          isUploadingProductDrive ? 'opacity-70 pointer-events-none' : ''
-                        }`}
-                      >
-                        <Upload className="w-3.5 h-3.5 text-amber-400" />
-                        <span>Phone / PC se Photo Daalein</span>
-                      </label>
-
-                      {/* Option B: Google Drive Upload */}
-                      <input
-                        type="file"
-                        ref={productModalFileInputRef}
-                        accept="image/*"
-                        onChange={handleProductModalImageUpload}
-                        disabled={isUploadingProductDrive}
-                        className="hidden"
-                        id="product-modal-drive-upload"
-                      />
-                      <label
-                        htmlFor="product-modal-drive-upload"
-                        className={`px-3.5 py-2 bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0 ${
-                          isUploadingProductDrive ? 'opacity-70 pointer-events-none' : ''
-                        }`}
-                      >
-                        {isUploadingProductDrive ? (
-                          <>
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                            <span>{driveUploadMsg || 'Uploading...'}</span>
-                          </>
-                        ) : (
-                          <>
-                            <CloudUpload className="w-3.5 h-3.5" />
-                            <span>Google Drive Sync</span>
-                          </>
-                        )}
-                      </label>
-                    </div>
-
-                    <div className="text-[10px] text-stone-500 leading-tight">
-                      Aap apne phone gallery ya PC se direct photo select kar sakte hain, ya Google Drive me upload kar sakte hain.
-                    </div>
-                  </div>
-
-                  {/* Or Manual URL / Drive Link Input */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-stone-600 mb-1">
-                      Or Direct Image / Google Drive Link
-                    </label>
-                    <input
-                      type="text"
-                      placeholder="Paste image link or select photo from device above..."
-                      value={editingProduct.image || ''}
-                      onChange={(e) =>
-                        setEditingProduct({
-                          ...editingProduct,
-                          image: normalizeProductImageUrl(e.target.value),
-                        })
-                      }
-                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
-                    />
-                  </div>
-
-                  {/* Live Visual Thumbnail Preview with Change/Remove */}
-                  {editingProduct.image && (
-                    <div className="flex items-center gap-3 p-2.5 bg-white rounded-xl border border-stone-200">
-                      <div className="w-16 h-20 bg-stone-100 rounded-lg overflow-hidden shrink-0 border border-stone-200">
-                        <img
-                          src={normalizeProductImageUrl(editingProduct.image)}
-                          alt="Product Preview"
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            const target = e.currentTarget;
-                            const fallback = getDriveThumbnailUrl(editingProduct.image || '');
-                            if (target.src !== fallback) {
-                              target.src = fallback;
-                            }
-                          }}
-                        />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
-                          <CheckCircle className="w-3.5 h-3.5" />
-                          Live Preview Ready
+                {/* Outfit Multi-Photo Studio (3 to 4 Photos) */}
+                <div className="p-4 bg-[#FBF7F0] border-2 border-stone-200 rounded-2xl space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <label className="block text-xs font-bold text-[#2B2320]">
+                          Outfit Multi-Photo Studio (3 to 4 Photos) *
+                        </label>
+                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#A87A2A]/10 text-[#A87A2A] border border-[#A87A2A]/20">
+                          Multi-Angle Carousel Ready
                         </span>
-                        <p className="text-[10px] text-stone-500 truncate font-mono mt-0.5">
-                          {editingProduct.image.startsWith('data:')
-                            ? 'Local Photo Attached (Save dabayein)'
-                            : editingProduct.image}
-                        </p>
-                        <div className="flex items-center gap-2.5 mt-1.5">
+                      </div>
+                      <p className="text-[10px] text-stone-500 mt-0.5">
+                        Ek outfit ke sath 3-4 photos add karein: Front Cover, Detail / Neck, Back View, aur Fabric Look.
+                      </p>
+                    </div>
+
+                    {/* Batch Upload Button */}
+                    <input
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      ref={batchPhotosInputRef}
+                      onChange={handleBatchPhotoUpload}
+                      className="hidden"
+                      id="batch-photos-upload"
+                    />
+                    <label
+                      htmlFor="batch-photos-upload"
+                      className="px-3.5 py-1.5 bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs flex items-center justify-center gap-1.5 shrink-0"
+                    >
+                      <Upload className="w-3.5 h-3.5" />
+                      <span>Ek Sath 3-4 Photos Chuney</span>
+                    </label>
+                  </div>
+
+                  {/* 4 Dedicated Photo Slots Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                    {/* Slot 1: Front / Main Cover */}
+                    <div className="bg-white p-2.5 rounded-xl border-2 border-[#A87A2A] flex flex-col justify-between shadow-2xs relative group">
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="text-[10px] font-bold text-[#A87A2A] uppercase tracking-wide truncate">
+                            Slot 1: Cover
+                          </span>
+                          <span className="text-[9px] bg-amber-100 text-amber-900 font-bold px-1.5 py-0.2 rounded-full">
+                            Main
+                          </span>
+                        </div>
+
+                        <div className="aspect-[3/4] bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative mb-2">
+                          {photoSlot1 ? (
+                            <img
+                              src={normalizeProductImageUrl(photoSlot1)}
+                              alt="Slot 1"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const fallback = getDriveThumbnailUrl(photoSlot1);
+                                if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 p-2 text-center">
+                              <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                              <span className="text-[10px] font-semibold">Front Cover Photo</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={slot1InputRef}
+                          onChange={(e) => e.target.files?.[0] && handleSingleSlotUpload(1, e.target.files[0])}
+                          className="hidden"
+                          id="slot1-upload"
+                        />
+                        <label
+                          htmlFor="slot1-upload"
+                          className="w-full py-1 text-center bg-stone-800 hover:bg-black text-white text-[10px] font-bold rounded-lg cursor-pointer block transition-colors"
+                        >
+                          {photoSlot1 ? 'Change Photo' : '+ Photo Daalein'}
+                        </label>
+                        {photoSlot1 && (
                           <button
                             type="button"
                             onClick={() => {
-                              if (productModalLocalFileInputRef.current) productModalLocalFileInputRef.current.click();
+                              setPhotoSlot1('');
+                              setEditingProduct((prev) => (prev ? { ...prev, image: '' } : prev));
                             }}
-                            className="text-[11px] font-semibold text-[#A87A2A] hover:underline flex items-center gap-1 cursor-pointer"
+                            className="w-full py-0.5 text-center text-rose-600 hover:text-rose-800 text-[10px] font-semibold cursor-pointer"
                           >
-                            <Camera className="w-3 h-3" />
-                            <span>Dusri Photo Chuney</span>
+                            Hataiye
                           </button>
-                          <span className="text-stone-300">•</span>
-                          <button
-                            type="button"
-                            onClick={() => setEditingProduct({ ...editingProduct, image: '' })}
-                            className="text-[11px] font-semibold text-rose-600 hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Hataiye</span>
-                          </button>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  )}
+
+                    {/* Slot 2: Close-up / Neck & Embroidery */}
+                    <div className="bg-white p-2.5 rounded-xl border border-stone-200 flex flex-col justify-between shadow-2xs relative group">
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="text-[10px] font-bold text-stone-700 uppercase tracking-wide truncate">
+                            Slot 2: Detail
+                          </span>
+                          <span className="text-[9px] bg-stone-100 text-stone-600 font-medium px-1.5 py-0.2 rounded-full">
+                            Close-up
+                          </span>
+                        </div>
+
+                        <div className="aspect-[3/4] bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative mb-2">
+                          {photoSlot2 ? (
+                            <img
+                              src={normalizeProductImageUrl(photoSlot2)}
+                              alt="Slot 2"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const fallback = getDriveThumbnailUrl(photoSlot2);
+                                if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 p-2 text-center">
+                              <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                              <span className="text-[10px]">Neck / Detail</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={slot2InputRef}
+                          onChange={(e) => e.target.files?.[0] && handleSingleSlotUpload(2, e.target.files[0])}
+                          className="hidden"
+                          id="slot2-upload"
+                        />
+                        <label
+                          htmlFor="slot2-upload"
+                          className="w-full py-1 text-center bg-stone-100 hover:bg-stone-200 text-stone-800 text-[10px] font-bold rounded-lg cursor-pointer block transition-colors"
+                        >
+                          {photoSlot2 ? 'Change' : '+ Add Photo'}
+                        </label>
+                        {photoSlot2 && (
+                          <div className="flex items-center justify-between text-[9px] pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleSwapSlotWithCover(2)}
+                              className="text-[#A87A2A] font-bold hover:underline"
+                              title="Make Cover Photo"
+                            >
+                              Set Cover
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPhotoSlot2('')}
+                              className="text-rose-600 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Slot 3: Back View / Drape / Dupatta */}
+                    <div className="bg-white p-2.5 rounded-xl border border-stone-200 flex flex-col justify-between shadow-2xs relative group">
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="text-[10px] font-bold text-stone-700 uppercase tracking-wide truncate">
+                            Slot 3: Back
+                          </span>
+                          <span className="text-[9px] bg-stone-100 text-stone-600 font-medium px-1.5 py-0.2 rounded-full">
+                            Drape
+                          </span>
+                        </div>
+
+                        <div className="aspect-[3/4] bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative mb-2">
+                          {photoSlot3 ? (
+                            <img
+                              src={normalizeProductImageUrl(photoSlot3)}
+                              alt="Slot 3"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const fallback = getDriveThumbnailUrl(photoSlot3);
+                                if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 p-2 text-center">
+                              <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                              <span className="text-[10px]">Back / Dupatta</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={slot3InputRef}
+                          onChange={(e) => e.target.files?.[0] && handleSingleSlotUpload(3, e.target.files[0])}
+                          className="hidden"
+                          id="slot3-upload"
+                        />
+                        <label
+                          htmlFor="slot3-upload"
+                          className="w-full py-1 text-center bg-stone-100 hover:bg-stone-200 text-stone-800 text-[10px] font-bold rounded-lg cursor-pointer block transition-colors"
+                        >
+                          {photoSlot3 ? 'Change' : '+ Add Photo'}
+                        </label>
+                        {photoSlot3 && (
+                          <div className="flex items-center justify-between text-[9px] pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleSwapSlotWithCover(3)}
+                              className="text-[#A87A2A] font-bold hover:underline"
+                              title="Make Cover Photo"
+                            >
+                              Set Cover
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPhotoSlot3('')}
+                              className="text-rose-600 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Slot 4: Fabric Texture / Styling / Real Model Look */}
+                    <div className="bg-white p-2.5 rounded-xl border border-stone-200 flex flex-col justify-between shadow-2xs relative group">
+                      <div>
+                        <div className="flex items-center justify-between gap-1 mb-1.5">
+                          <span className="text-[10px] font-bold text-stone-700 uppercase tracking-wide truncate">
+                            Slot 4: Look
+                          </span>
+                          <span className="text-[9px] bg-stone-100 text-stone-600 font-medium px-1.5 py-0.2 rounded-full">
+                            Texture
+                          </span>
+                        </div>
+
+                        <div className="aspect-[3/4] bg-stone-100 rounded-lg overflow-hidden border border-stone-200 relative mb-2">
+                          {photoSlot4 ? (
+                            <img
+                              src={normalizeProductImageUrl(photoSlot4)}
+                              alt="Slot 4"
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const fallback = getDriveThumbnailUrl(photoSlot4);
+                                if (e.currentTarget.src !== fallback) e.currentTarget.src = fallback;
+                              }}
+                            />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-stone-400 p-2 text-center">
+                              <ImageIcon className="w-6 h-6 mb-1 opacity-50" />
+                              <span className="text-[10px]">Fabric / Styling</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          ref={slot4InputRef}
+                          onChange={(e) => e.target.files?.[0] && handleSingleSlotUpload(4, e.target.files[0])}
+                          className="hidden"
+                          id="slot4-upload"
+                        />
+                        <label
+                          htmlFor="slot4-upload"
+                          className="w-full py-1 text-center bg-stone-100 hover:bg-stone-200 text-stone-800 text-[10px] font-bold rounded-lg cursor-pointer block transition-colors"
+                        >
+                          {photoSlot4 ? 'Change' : '+ Add Photo'}
+                        </label>
+                        {photoSlot4 && (
+                          <div className="flex items-center justify-between text-[9px] pt-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleSwapSlotWithCover(4)}
+                              className="text-[#A87A2A] font-bold hover:underline"
+                              title="Make Cover Photo"
+                            >
+                              Set Cover
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPhotoSlot4('')}
+                              className="text-rose-600 hover:underline"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* URL paste input for Slot 1 if needed */}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-stone-600 mb-1">
+                      Or Direct Image / Google Drive Link (Slot 1 Cover)
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Paste image link or select photos above..."
+                      value={photoSlot1 || ''}
+                      onChange={(e) => {
+                        const val = normalizeProductImageUrl(e.target.value);
+                        setPhotoSlot1(val);
+                        setEditingProduct((prev) => (prev ? { ...prev, image: val } : prev));
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -6745,6 +7793,763 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   >
                     Add Courier Partner
                   </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* ADD MANUAL CUSTOMER ORDER MODAL */}
+        {showAddOrderModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-stone-200">
+              <div className="flex items-center justify-between pb-4 border-b border-stone-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-[#A87A2A]/10 text-[#A87A2A] flex items-center justify-center">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-stone-900 text-lg">Naya Customer Order Add Karein</h3>
+                    <p className="text-xs text-stone-500">Phone/WhatsApp ya Store se aaya naya customer order create karein</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowAddOrderModal(false)}
+                  className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateManualOrder} className="space-y-5 pt-4 text-xs">
+                {/* Customer Details */}
+                <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+                  <h4 className="font-bold text-stone-800 flex items-center gap-1.5">
+                    <User className="w-4 h-4 text-[#A87A2A]" /> Customer Contact Details
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Customer Full Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newOrderForm.customerName}
+                        placeholder="e.g. Priya Sharma"
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, customerName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Phone Number (10 digits) *</label>
+                      <input
+                        type="tel"
+                        required
+                        value={newOrderForm.customerPhone}
+                        placeholder="e.g. 9876543210"
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, customerPhone: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block font-semibold text-stone-700 mb-1">Email Address (Optional)</label>
+                      <input
+                        type="email"
+                        value={newOrderForm.customerEmail}
+                        placeholder="customer@gmail.com"
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, customerEmail: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Shipping Address */}
+                <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+                  <h4 className="font-bold text-stone-800 flex items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-[#A87A2A]" /> Shipping Address
+                  </h4>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">House / Flat, Street, Landmark *</label>
+                    <textarea
+                      required
+                      rows={2}
+                      value={newOrderForm.shippingAddress}
+                      placeholder="e.g. House No. 42, Near Raj Mandir, MI Road"
+                      onChange={(e) => setNewOrderForm({ ...newOrderForm, shippingAddress: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">City *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newOrderForm.city}
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, city: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">State *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newOrderForm.state}
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, state: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Pincode *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newOrderForm.pincode}
+                        placeholder="302001"
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, pincode: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Outfit & Pricing */}
+                <div className="p-3.5 bg-stone-50 rounded-xl border border-stone-200 space-y-3">
+                  <h4 className="font-bold text-stone-800 flex items-center gap-1.5">
+                    <ShoppingBag className="w-4 h-4 text-[#A87A2A]" /> Outfit Item Details & Pricing
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Outfit / Product Name *</label>
+                      <input
+                        type="text"
+                        required
+                        value={newOrderForm.itemName}
+                        placeholder="e.g. Royal Handblock Anarkali Suit"
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, itemName: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block font-semibold text-stone-700 mb-1">Size</label>
+                        <select
+                          value={newOrderForm.itemSize}
+                          onChange={(e) => setNewOrderForm({ ...newOrderForm, itemSize: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                        >
+                          {['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Free Size', 'Custom'].map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block font-semibold text-stone-700 mb-1">Qty</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={newOrderForm.itemQuantity}
+                          onChange={(e) => {
+                            const q = Number(e.target.value) || 1;
+                            setNewOrderForm((prev) => ({
+                              ...prev,
+                              itemQuantity: q,
+                              totalAmount: (Number(prev.itemPrice) || 0) * q - (Number(prev.discountAmount) || 0),
+                            }));
+                          }}
+                          className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Unit Price (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        value={newOrderForm.itemPrice}
+                        onChange={(e) => {
+                          const p = Number(e.target.value) || 0;
+                          setNewOrderForm((prev) => ({
+                            ...prev,
+                            itemPrice: p,
+                            totalAmount: p * (Number(prev.itemQuantity) || 1) - (Number(prev.discountAmount) || 0),
+                          }));
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Total Order Amount (₹) *</label>
+                      <input
+                        type="number"
+                        required
+                        value={newOrderForm.totalAmount}
+                        onChange={(e) => setNewOrderForm({ ...newOrderForm, totalAmount: Number(e.target.value) || 0 })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 font-bold text-stone-900 focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment, Status & Tracking */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Payment Method</label>
+                    <select
+                      value={newOrderForm.paymentMethod}
+                      onChange={(e) => setNewOrderForm({ ...newOrderForm, paymentMethod: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    >
+                      <option value="cod">Cash on Delivery (COD)</option>
+                      <option value="razorpay">Razorpay Online</option>
+                      <option value="upi">Direct UPI Transfer</option>
+                      <option value="bank_transfer">Bank NEFT/IMPS</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Payment Status</label>
+                    <select
+                      value={newOrderForm.paymentStatus}
+                      onChange={(e) => setNewOrderForm({ ...newOrderForm, paymentStatus: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="refunded">Refunded</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Order Status</label>
+                    <select
+                      value={newOrderForm.orderStatus}
+                      onChange={(e) => setNewOrderForm({ ...newOrderForm, orderStatus: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    >
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Optional Courier & Tracking */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Courier Partner</label>
+                    <input
+                      type="text"
+                      value={newOrderForm.courierPartner}
+                      placeholder="e.g. Delhivery Express"
+                      onChange={(e) => setNewOrderForm({ ...newOrderForm, courierPartner: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">AWB Tracking Number</label>
+                    <input
+                      type="text"
+                      value={newOrderForm.trackingNumber}
+                      placeholder="e.g. DL982736154IN"
+                      onChange={(e) => setNewOrderForm({ ...newOrderForm, trackingNumber: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Order Notes (Customer / Admin)</label>
+                  <input
+                    type="text"
+                    value={newOrderForm.notes}
+                    placeholder="e.g. Urgent wedding order, customer requested golden dupatta"
+                    onChange={(e) => setNewOrderForm({ ...newOrderForm, notes: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-stone-200 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowAddOrderModal(false)}
+                    className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingOrder}
+                    className="px-5 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold transition-colors shadow-xs flex items-center gap-1.5"
+                  >
+                    {isSavingOrder ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Saving...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Create & Save Order</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* EDIT / UPDATE CUSTOMER ORDER MODAL */}
+        {editingOrderModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-stone-200">
+              <div className="flex items-center justify-between pb-4 border-b border-stone-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Edit className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-stone-900 text-lg">
+                      Order #{editingOrderModal.orderNumber || editingOrderModal.id} Update Karein
+                    </h3>
+                    <p className="text-xs text-stone-500">Customer details, address ya status modify karein</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setEditingOrderModal(null)}
+                  className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleUpdateOrderDetails} className="space-y-4 pt-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Customer Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingOrderModal.customerName || ''}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, customerName: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      required
+                      value={editingOrderModal.customerPhone || ''}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, customerPhone: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Customer Email</label>
+                  <input
+                    type="email"
+                    value={editingOrderModal.customerEmail || ''}
+                    onChange={(e) => setEditingOrderModal({ ...editingOrderModal, customerEmail: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Shipping Address</label>
+                  <textarea
+                    rows={2}
+                    value={editingOrderModal.shippingAddress || ''}
+                    onChange={(e) => setEditingOrderModal({ ...editingOrderModal, shippingAddress: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={editingOrderModal.city || ''}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, city: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">State</label>
+                    <input
+                      type="text"
+                      value={editingOrderModal.state || ''}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, state: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Pincode</label>
+                    <input
+                      type="text"
+                      value={editingOrderModal.pincode || ''}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, pincode: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Total Amount (₹)</label>
+                    <input
+                      type="number"
+                      value={editingOrderModal.totalAmount || 0}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, totalAmount: Number(e.target.value) })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-bold focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Payment Status</label>
+                    <select
+                      value={editingOrderModal.paymentStatus || 'pending'}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, paymentStatus: e.target.value as any })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="refunded">Refunded</option>
+                      <option value="failed">Failed</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Order Status</label>
+                    <select
+                      value={editingOrderModal.orderStatus || 'Confirmed'}
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, orderStatus: e.target.value as any })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    >
+                      <option value="Placed">Placed</option>
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Courier Partner</label>
+                    <input
+                      type="text"
+                      value={(editingOrderModal as any).courierPartner || (editingOrderModal as any).courierName || ''}
+                      placeholder="e.g. Delhivery Express"
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, courierPartner: e.target.value } as any)}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Tracking Number</label>
+                    <input
+                      type="text"
+                      value={editingOrderModal.trackingNumber || ''}
+                      placeholder="AWB Tracking #"
+                      onChange={(e) => setEditingOrderModal({ ...editingOrderModal, trackingNumber: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Notes</label>
+                  <input
+                    type="text"
+                    value={(editingOrderModal as any).notes || ''}
+                    placeholder="Customer notes"
+                    onChange={(e) => setEditingOrderModal({ ...editingOrderModal, notes: e.target.value } as any)}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                  />
+                </div>
+
+                <div className="pt-3 border-t border-stone-200 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingOrderModal(null)}
+                    className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingOrder}
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold transition-colors shadow-xs flex items-center gap-1.5"
+                  >
+                    {isSavingOrder ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4" />
+                        <span>Update Order</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* DELETE ORDER CONFIRMATION MODAL */}
+        {orderToDelete && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-stone-200">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-red-100 text-red-600 flex items-center justify-center shrink-0">
+                  <Trash2 className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="font-serif font-bold text-stone-900 text-base">Order Remove Karein?</h3>
+                  <p className="text-xs text-stone-500">Order #{orderToDelete.orderNumber || orderToDelete.id}</p>
+                </div>
+              </div>
+
+              <div className="p-3 bg-red-50 rounded-xl border border-red-100 text-xs text-red-800 space-y-1 mb-5">
+                <p className="font-bold">Kya aap is order ko database se permanently delete karna chahte hain?</p>
+                <p className="text-red-700">Customer: <span className="font-semibold">{orderToDelete.customerName}</span> ({orderToDelete.customerPhone})</p>
+                <p className="text-red-700">Amount: <span className="font-semibold">₹{orderToDelete.totalAmount}</span></p>
+                <p className="text-[11px] text-red-600 mt-2">Yeh action undo nahi kiya ja sakta.</p>
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOrderToDelete(null)}
+                  className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-bold text-xs"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => executeDeleteOrder(orderToDelete.id)}
+                  className="px-5 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-xs transition-colors shadow-xs flex items-center gap-1.5"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>Haan, Delete Karein</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ORDER TRACKING & LIVE CHECKPOINT MODAL */}
+        {trackingModalOrder && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white rounded-2xl max-w-xl w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl border border-stone-200">
+              <div className="flex items-center justify-between pb-4 border-b border-stone-200">
+                <div className="flex items-center gap-2">
+                  <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-700 flex items-center justify-center">
+                    <Truck className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-bold text-stone-900 text-lg">
+                      Live Shipment & Tracking - #{trackingModalOrder.orderNumber || trackingModalOrder.id}
+                    </h3>
+                    <p className="text-xs text-stone-500">
+                      Customer: {trackingModalOrder.customerName} ({trackingModalOrder.customerPhone})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setTrackingModalOrder(null)}
+                  className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveTrackingDetails} className="space-y-4 pt-4 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Courier Partner</label>
+                    <input
+                      type="text"
+                      required
+                      value={trackingForm.courierPartner}
+                      placeholder="e.g. Delhivery Express, Blue Dart, Shiprocket"
+                      onChange={(e) => setTrackingForm({ ...trackingForm, courierPartner: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">AWB Tracking Number</label>
+                    <input
+                      type="text"
+                      required
+                      value={trackingForm.trackingNumber}
+                      placeholder="e.g. DEL789123456IN"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setTrackingForm((prev) => ({
+                          ...prev,
+                          trackingNumber: val,
+                          trackingUrl: val ? `https://www.delhivery.com/track/package/${val}` : prev.trackingUrl,
+                        }));
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">Tracking Web URL</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="url"
+                      value={trackingForm.trackingUrl}
+                      placeholder="https://www.delhivery.com/track/package/..."
+                      onChange={(e) => setTrackingForm({ ...trackingForm, trackingUrl: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                    />
+                    {trackingForm.trackingUrl && (
+                      <a
+                        href={trackingForm.trackingUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center shrink-0"
+                        title="Test Tracking Link"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Estimated Delivery</label>
+                    <input
+                      type="text"
+                      value={trackingForm.estimatedDelivery}
+                      placeholder="e.g. 3 to 5 Business Days"
+                      onChange={(e) => setTrackingForm({ ...trackingForm, estimatedDelivery: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Order Status</label>
+                    <select
+                      value={trackingForm.status}
+                      onChange={(e) => setTrackingForm({ ...trackingForm, status: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    >
+                      <option value="Confirmed">Confirmed</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Shipped">Shipped</option>
+                      <option value="In Transit">In Transit</option>
+                      <option value="Out for Delivery">Out for Delivery</option>
+                      <option value="Delivered">Delivered</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Add Live Checkpoint Timeline Section */}
+                <div className="p-3.5 bg-amber-50/60 rounded-xl border border-amber-200/80 space-y-3">
+                  <h4 className="font-bold text-amber-900 flex items-center gap-1.5">
+                    <Clock className="w-4 h-4 text-amber-700" /> Naya Timeline Checkpoint Add Karein
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Checkpoint Status</label>
+                      <select
+                        value={trackingForm.newCheckpointStatus}
+                        onChange={(e) => setTrackingForm({ ...trackingForm, newCheckpointStatus: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                      >
+                        <option value="Dispatched">Dispatched from Warehouse</option>
+                        <option value="In Transit">In Transit</option>
+                        <option value="Arrived at Hub">Arrived at Courier Hub</option>
+                        <option value="Out for Delivery">Out for Delivery</option>
+                        <option value="Delivered">Delivered to Customer</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block font-semibold text-stone-700 mb-1">Location / Hub</label>
+                      <input
+                        type="text"
+                        value={trackingForm.newCheckpointLocation}
+                        placeholder="e.g. Jaipur Sorting Facility"
+                        onChange={(e) => setTrackingForm({ ...trackingForm, newCheckpointLocation: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Checkpoint Note / Update Message</label>
+                    <input
+                      type="text"
+                      value={trackingForm.newCheckpointNote}
+                      placeholder="e.g. Package scanned and out for delivery"
+                      onChange={(e) => setTrackingForm({ ...trackingForm, newCheckpointNote: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                    />
+                  </div>
+                </div>
+
+                {/* Display Current Timeline Events if available */}
+                {((trackingModalOrder as any).shipment?.events?.length > 0 || (trackingModalOrder as any).shipment?.statusUpdates?.length > 0) && (
+                  <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                    <h5 className="font-bold text-stone-700 mb-2">Past Tracking Timeline:</h5>
+                    <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                      {((trackingModalOrder as any).shipment?.events || (trackingModalOrder as any).shipment?.statusUpdates || []).map((ev: any, idx: number) => (
+                        <div key={idx} className="flex items-start gap-2 text-[11px] pb-2 border-b border-stone-200 last:border-0 last:pb-0">
+                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                          <div className="flex-1">
+                            <span className="font-bold text-stone-800">{ev.status || ev.title}</span>
+                            {ev.location && <span className="text-stone-500"> • {ev.location}</span>}
+                            <p className="text-stone-600">{ev.note || ev.description}</p>
+                          </div>
+                          <span className="text-[10px] text-stone-400 shrink-0">
+                            {ev.timestamp ? new Date(ev.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-3 border-t border-stone-200 flex items-center justify-between">
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveTracking(trackingModalOrder.id)}
+                    className="px-3 py-2 rounded-xl border border-red-200 text-red-600 hover:bg-red-50 font-bold transition-colors flex items-center gap-1.5"
+                    title="Remove AWB & Courier Details"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Remove Tracking</span>
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTrackingModalOrder(null)}
+                      className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-bold"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold transition-colors shadow-xs flex items-center gap-1.5"
+                    >
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Save Tracking Details</span>
+                    </button>
+                  </div>
                 </div>
               </form>
             </div>
