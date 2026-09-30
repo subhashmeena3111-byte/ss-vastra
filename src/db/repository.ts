@@ -512,6 +512,26 @@ export async function getOrdersList(): Promise<LocalOrder[]> {
                   trackingNumber: shipment.trackingNumber || undefined,
                   trackingUrl: shipment.trackingUrl || undefined,
                   estimatedDelivery: shipment.estimatedDelivery || undefined,
+                  statusUpdates: (() => {
+                    if (!shipment.statusUpdates) return [];
+                    if (Array.isArray(shipment.statusUpdates)) return shipment.statusUpdates;
+                    try {
+                      const parsed = JSON.parse(shipment.statusUpdates);
+                      return Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                      return [];
+                    }
+                  })(),
+                  events: (() => {
+                    if (!shipment.statusUpdates) return [];
+                    if (Array.isArray(shipment.statusUpdates)) return shipment.statusUpdates;
+                    try {
+                      const parsed = JSON.parse(shipment.statusUpdates);
+                      return Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                      return [];
+                    }
+                  })(),
                 }
               : undefined,
           };
@@ -541,20 +561,34 @@ export async function getOrdersList(): Promise<LocalOrder[]> {
 }
 
 export async function getOrderByNumber(orderNumber: string) {
-  const normNumber = String(orderNumber || '').trim().toUpperCase();
+  const normNumber = String(orderNumber || '').trim().toUpperCase().replace(/^#/, '');
   if (await isDbReady()) {
     try {
       const found = await db.select().from(orders).where(eq(orders.orderNumber, normNumber));
       if (found && found.length > 0) {
         const o = found[0];
         const items = await db.select().from(orderItems).where(eq(orderItems.orderId, o.id));
-        const shipment = await db.select().from(shipments).where(eq(shipments.orderId, o.id));
+        const shipmentList = await db.select().from(shipments).where(eq(shipments.orderId, o.id));
+        const s = shipmentList[0] || null;
+        let parsedUpdates: any[] = [];
+        if (s && s.statusUpdates) {
+          try {
+            parsedUpdates = typeof s.statusUpdates === 'string' ? JSON.parse(s.statusUpdates) : s.statusUpdates;
+          } catch {
+            parsedUpdates = [];
+          }
+        }
         return {
           ...o,
           status: o.orderStatus,
           orderStatus: o.orderStatus,
           items,
-          shipment: shipment[0] || null,
+          shipment: s ? {
+            ...s,
+            courierPartner: s.courierName,
+            statusUpdates: Array.isArray(parsedUpdates) ? parsedUpdates : [],
+            events: Array.isArray(parsedUpdates) ? parsedUpdates : [],
+          } : null,
         };
       }
     } catch {
@@ -565,7 +599,7 @@ export async function getOrderByNumber(orderNumber: string) {
   if (fromLocal) return fromLocal;
 
   const all = localStore.getOrders();
-  return all.find((o) => (o.orderNumber || '').trim().toUpperCase() === normNumber) || null;
+  return all.find((o) => (o.orderNumber || '').trim().toUpperCase().replace(/^#/, '') === normNumber) || null;
 }
 
 export async function createOrderRecord(

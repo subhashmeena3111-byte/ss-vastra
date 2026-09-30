@@ -15,6 +15,10 @@ import {
   Heart,
   Trash2,
   Edit3,
+  ChevronDown,
+  ChevronUp,
+  Lock,
+  BadgeCheck,
 } from 'lucide-react';
 import { Product } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
@@ -86,6 +90,40 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   const [addedToast, setAddedToast] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [openAccordion, setOpenAccordion] = useState<string | null>('shipping');
+
+  const toggleAccordion = (name: string) => {
+    setOpenAccordion((prev) => (prev === name ? null : name));
+  };
+
+  const parsedDesc = useMemo(() => {
+    const raw = product.description || '';
+    const lines = raw.split('\n').map((l) => l.trim()).filter(Boolean);
+    const bullets: string[] = [];
+    const specs: { label: string; value: string }[] = [];
+    const leadParts: string[] = [];
+
+    lines.forEach((line) => {
+      if (/^[\*\-\•\▪\▫\+]\s*/.test(line)) {
+        bullets.push(line.replace(/^[\*\-\•\▪\▫\+]\s*/, '').trim());
+      } else if (/^[A-Za-z0-9\s&]{2,22}:/i.test(line) && !line.toLowerCase().startsWith('http')) {
+        const idx = line.indexOf(':');
+        const label = line.slice(0, idx).trim();
+        const value = line.slice(idx + 1).trim();
+        if (value) {
+          specs.push({ label, value });
+        }
+      } else if (!line.startsWith('✨') && !line.startsWith('🧵') && !line.startsWith('👗') && !line.startsWith('🌸')) {
+        leadParts.push(line);
+      }
+    });
+
+    return {
+      leadText: leadParts.length > 0 ? leadParts.join(' ') : raw,
+      bullets,
+      specs,
+    };
+  }, [product.description]);
 
   const discount =
     product.discountPercent ||
@@ -517,17 +555,76 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               )}
             </div>
 
-            {/* Description & Key Highlights */}
+            {/* 100% SECURE PAYMENTS Trust Banner (Vastramaniaa Luxury Style) */}
             <div className="border-t border-[#E9A9BB]/30 pt-4 mb-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 p-3 rounded-2xl bg-[#FAF5EE] border border-[#E9A9BB]/40 mb-4">
+                <div className="flex items-center gap-1.5 text-stone-700">
+                  <Lock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                  <span className="text-[10px] sm:text-[11px] font-bold tracking-wider uppercase">
+                    100% SECURE PAYMENTS
+                  </span>
+                </div>
+                <div className="flex items-center gap-1.5 flex-wrap text-[10px] font-bold">
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 text-sky-700 shadow-2xs">
+                    Paytm
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 text-purple-700 shadow-2xs">
+                    PhonePe
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 text-blue-600 shadow-2xs">
+                    GPay
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 text-stone-700 shadow-2xs">
+                    NET BANKING
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-white border border-stone-200 text-amber-700 shadow-2xs">
+                    VISA / MC
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-300 shadow-2xs">
+                    COD ✓
+                  </span>
+                </div>
+              </div>
+
+              {/* Lead Product Description */}
               <h4 className="text-xs font-bold text-[#2B2320] uppercase tracking-wider mb-2">
                 About The Outfit
               </h4>
-              <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-3">
-                {product.description}
+              <p className="text-xs sm:text-sm text-stone-700 font-medium leading-relaxed mb-3">
+                {parsedDesc.leadText}
               </p>
 
+              {/* Key Specs Pills if available */}
+              {parsedDesc.specs.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3.5">
+                  {parsedDesc.specs.map((sp, idx) => (
+                    <div key={idx} className="p-2 rounded-xl bg-stone-50 border border-stone-200 text-[11px]">
+                      <span className="text-stone-400 block uppercase font-bold text-[9px] tracking-wider">
+                        {sp.label}
+                      </span>
+                      <span className="font-semibold text-stone-800 line-clamp-1">
+                        {sp.value}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Bullet Highlights in Vastramaniaa Style */}
+              {parsedDesc.bullets.length > 0 && (
+                <ul className="space-y-2 mb-4 bg-[#FBF7F0]/60 p-3.5 rounded-2xl border border-[#E9A9BB]/30">
+                  {parsedDesc.bullets.map((b, i) => (
+                    <li key={i} className="flex items-start gap-2 text-xs sm:text-sm text-stone-700 leading-relaxed">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#A87A2A] mt-2 shrink-0" />
+                      <span>{b}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Safe Highlights tags */}
               {safeHighlights.length > 0 && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-stone-700">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-stone-700 mb-4">
                   {safeHighlights.map((h, i) => (
                     <div key={i} className="flex items-center gap-2">
                       <Check className="w-3.5 h-3.5 text-[#A87A2A] shrink-0" />
@@ -536,21 +633,128 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   ))}
                 </div>
               )}
-            </div>
 
-            {/* Trust Assurance Grid */}
-            <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-[#FBF7F0] border border-[#E9A9BB]/30 text-center text-[11px] text-stone-600">
-              <div className="flex flex-col items-center gap-1">
-                <Truck className="w-4 h-4 text-[#A87A2A]" />
-                <span>Fast Dispatch</span>
+              {/* SS VASTRA Promise Card (Vastramaniaa Promise format) */}
+              <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#FAF5EE] via-[#FBF7F0] to-[#F7E3E8]/40 border border-[#E9A9BB]/50 text-xs text-stone-800 leading-relaxed mb-4">
+                <span className="font-serif font-bold text-[#A87A2A] text-sm block mb-1">
+                  SS VASTRA Promise:
+                </span>
+                <p className="text-stone-700">
+                  Cash on Delivery available | Free Prepaid Shipping across India | 7-Day Easy Doorstep Exchange | 100% Handcrafted Jaipuri Fabrics
+                </p>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <ShieldCheck className="w-4 h-4 text-[#A87A2A]" />
-                <span>Razorpay / COD</span>
+
+              {/* Need Styling Help? Direct WhatsApp Assist */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 text-xs mb-4">
+                <div className="text-emerald-900">
+                  <span className="font-bold">Need styling help or custom sizing?</span>
+                  <p className="text-[11px] text-emerald-700">WhatsApp us at +91 9783770735 or +91 7014897197</p>
+                </div>
+                <a
+                  href={`https://wa.me/919783770735?text=${encodeURIComponent(
+                    `Namaste SS VASTRA! Mujhe "${product.name}" ke styling aur sizing ke bare me guide karein.`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs inline-flex items-center gap-1.5 self-start sm:self-auto transition-colors shadow-xs"
+                >
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Chat on WhatsApp</span>
+                </a>
               </div>
-              <div className="flex flex-col items-center gap-1">
-                <RotateCcw className="w-4 h-4 text-[#A87A2A]" />
-                <span>Easy Exchange</span>
+
+              {/* Interactive Collapsible Accordions (Shipping, Care, Exchange) */}
+              <div className="space-y-2 border-t border-stone-200 pt-4">
+                {/* Accordion 1: Shipping */}
+                <div className="border border-stone-200 rounded-2xl overflow-hidden bg-white">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion('shipping')}
+                    className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#2B2320]">
+                      <Truck className="w-4 h-4 text-[#A87A2A]" />
+                      <span>Shipping & Delivery Partners</span>
+                    </div>
+                    {openAccordion === 'shipping' ? (
+                      <ChevronUp className="w-4 h-4 text-stone-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-stone-500" />
+                    )}
+                  </button>
+
+                  {openAccordion === 'shipping' && (
+                    <div className="px-4 pb-4 pt-1 text-xs text-stone-600 leading-relaxed border-t border-stone-100 bg-[#FAF5EE]/30 space-y-2 animate-in fade-in duration-150">
+                      <p>
+                        We strive to offer a seamless shopping experience with timely and safe deliveries through trusted courier partners like <strong>Delhivery, Bluedart, DTDC, Shadowfax, and Shiprocket</strong>.
+                      </p>
+                      <p>
+                        SS VASTRA offers <strong>Free Shipping across India</strong> for prepaid orders, with nominal COD charges. Orders are safely packaged in tamper-proof boxes and dispatched within 24–48 hours from our Jaipur Sanganer atelier.
+                      </p>
+                      <p className="text-[11px] text-[#A87A2A] font-bold">
+                        Average Delivery Time: 3 to 5 business days nationwide.
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Accordion 2: Fabric Care */}
+                <div className="border border-stone-200 rounded-2xl overflow-hidden bg-white">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion('care')}
+                    className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#2B2320]">
+                      <Sparkles className="w-4 h-4 text-[#A87A2A]" />
+                      <span>Fabric Care & Wash Instructions</span>
+                    </div>
+                    {openAccordion === 'care' ? (
+                      <ChevronUp className="w-4 h-4 text-stone-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-stone-500" />
+                    )}
+                  </button>
+
+                  {openAccordion === 'care' && (
+                    <div className="px-4 pb-4 pt-1 text-xs text-stone-600 leading-relaxed border-t border-stone-100 bg-[#FAF5EE]/30 space-y-1.5 animate-in fade-in duration-150">
+                      <p>• Handcrafted from authentic Jaipur natural fibers and traditional block prints.</p>
+                      <p>• Dry clean recommended for first wash or gentle hand wash separately in cold water with mild liquid detergent.</p>
+                      <p>• Do not soak, scrub, or bleach. Dry inside out in shade to maintain color brilliance.</p>
+                      <p>• Steam iron on medium heat on the reverse side of the fabric.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Accordion 3: Return & Exchange */}
+                <div className="border border-stone-200 rounded-2xl overflow-hidden bg-white">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion('returns')}
+                    className="w-full p-3.5 flex items-center justify-between text-left hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold text-[#2B2320]">
+                      <RotateCcw className="w-4 h-4 text-[#A87A2A]" />
+                      <span>Return & Doorstep Exchange Policy</span>
+                    </div>
+                    {openAccordion === 'returns' ? (
+                      <ChevronUp className="w-4 h-4 text-stone-500" />
+                    ) : (
+                      <ChevronDown className="w-4 h-4 text-stone-500" />
+                    )}
+                  </button>
+
+                  {openAccordion === 'returns' && (
+                    <div className="px-4 pb-4 pt-1 text-xs text-stone-600 leading-relaxed border-t border-stone-100 bg-[#FAF5EE]/30 space-y-2 animate-in fade-in duration-150">
+                      <p>
+                        Enjoy complete peace of mind with our <strong>7-Day Doorstep Exchange Policy</strong>.
+                      </p>
+                      <p>
+                        Need a size exchange or different color? Simply WhatsApp our Jaipur support team with your Order ID, and our courier partner will arrange hassle-free reverse pickup from your doorstep.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>

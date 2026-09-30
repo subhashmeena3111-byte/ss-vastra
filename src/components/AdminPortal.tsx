@@ -6456,6 +6456,102 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               </div>
                             ))}
                           </div>
+
+                          {/* How to Attach Delivery Partner to Website (Step-by-Step Guide) */}
+                          <div className="mt-6 p-5 rounded-2xl bg-gradient-to-br from-[#FAF5EE] via-[#FBF7F0] to-[#F7E3E8]/30 border border-[#E9A9BB]/60 shadow-xs space-y-4">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-xl bg-[#A87A2A] text-white flex items-center justify-center">
+                                <Truck className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <h4 className="font-serif font-bold text-base text-[#2B2320]">
+                                  Delivery Partner (Shiprocket / Delhivery) Ko Website Se Kaise Attach Karein?
+                                </h4>
+                                <p className="text-xs text-stone-600">
+                                  Apne courier partner ko SS VASTRA portal se connect karke automated live tracking shuru karne ke aasan steps:
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                              <div className="p-3.5 bg-white rounded-xl border border-stone-200 shadow-2xs space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-[#A87A2A] text-white flex items-center justify-center font-bold text-[10px]">1</span>
+                                  <strong className="text-stone-900">Shiprocket / Delhivery Account</strong>
+                                </div>
+                                <p className="text-stone-600 pl-7 text-[11px] leading-relaxed">
+                                  <a href="https://app.shiprocket.in" target="_blank" rel="noreferrer" className="text-[#A87A2A] font-bold underline">Shiprocket</a> ya <a href="https://one.delhivery.com" target="_blank" rel="noreferrer" className="text-[#A87A2A] font-bold underline">Delhivery Direct</a> par free seller account sign up karein.
+                                </p>
+                              </div>
+
+                              <div className="p-3.5 bg-white rounded-xl border border-stone-200 shadow-2xs space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-[#A87A2A] text-white flex items-center justify-center font-bold text-[10px]">2</span>
+                                  <strong className="text-stone-900">Jaipur Workshop Pickup Pincode</strong>
+                                </div>
+                                <p className="text-stone-600 pl-7 text-[11px] leading-relaxed">
+                                  Courier dashboard me Pickup Address: <strong>Green Vihar Vatika, Sanganer, Jaipur (303905)</strong> add karein.
+                                </p>
+                              </div>
+
+                              <div className="p-3.5 bg-white rounded-xl border border-stone-200 shadow-2xs space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-[#A87A2A] text-white flex items-center justify-center font-bold text-[10px]">3</span>
+                                  <strong className="text-stone-900">Live Webhook Integration URL</strong>
+                                </div>
+                                <p className="text-stone-600 pl-7 text-[11px] leading-relaxed">
+                                  Apne courier dashboard me Webhook URL paste karein:
+                                  <code className="block mt-1 font-mono text-[10px] text-[#A87A2A] bg-stone-50 p-1 rounded border border-stone-200 truncate">
+                                    https://ss-vastra-ten.vercel.app/api/webhooks/shipping
+                                  </code>
+                                </p>
+                              </div>
+
+                              <div className="p-3.5 bg-white rounded-xl border border-stone-200 shadow-2xs space-y-1">
+                                <div className="flex items-center gap-2">
+                                  <span className="w-5 h-5 rounded-full bg-[#A87A2A] text-white flex items-center justify-center font-bold text-[10px]">4</span>
+                                  <strong className="text-stone-900">1-Click Live Customer Tracking</strong>
+                                </div>
+                                <p className="text-stone-600 pl-7 text-[11px] leading-relaxed">
+                                  Orders me AWB generate hote hi customer ko WhatsApp par tracking link mil jayega aur website par live tracking connect ho jayegi.
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Live AWB Link & Tracker Simulator */}
+                            <div className="p-4 bg-white rounded-xl border border-[#A87A2A]/40 space-y-3">
+                              <h5 className="font-bold text-xs text-[#2B2320] flex items-center gap-2">
+                                <Sparkles className="w-3.5 h-3.5 text-[#A87A2A]" />
+                                <span>Live Courier Link & AWB Tester Tool (Admin Studio)</span>
+                              </h5>
+                              <p className="text-[11px] text-stone-500">
+                                Koi bhi AWB number yahan test karein aur dekhein customer ko live tracking kaisa dikhega:
+                              </p>
+                              <div className="flex flex-col sm:flex-row gap-2">
+                                <input
+                                  type="text"
+                                  id="adminTestAwbInput"
+                                  placeholder="Enter AWB (e.g. DEL789123456 or SSVTRK26890)"
+                                  defaultValue="SSVTRK26890"
+                                  className="flex-1 px-3 py-2 rounded-xl border border-stone-300 font-mono text-xs focus:outline-none focus:border-[#A87A2A]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const input = (document.getElementById('adminTestAwbInput') as HTMLInputElement)?.value || 'SSVTRK26890';
+                                    const primary = deliveryPartnersList.find((p) => p.isDefault) || deliveryPartnersList[0];
+                                    const tmpl = primary?.trackingUrlTemplate || 'https://www.delhivery.com/track/package/{TRACKING_NO}';
+                                    const url = tmpl.replace('{TRACKING_NO}', input.trim());
+                                    window.open(url, '_blank');
+                                  }}
+                                  className="px-4 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+                                >
+                                  <span>Test Live Tracking Link</span>
+                                  <ExternalLink className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       )}
 
@@ -7657,14 +7753,115 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   </div>
                 </div>
 
-                <div>
-                  <label className="block font-semibold mb-1">Description</label>
+                {/* Description Studio with One-Click Templates & Live Formats */}
+                <div className="space-y-2 p-3 bg-stone-50 rounded-2xl border border-stone-200">
+                  <div className="flex items-center justify-between">
+                    <label className="font-bold text-xs text-[#2B2320]">
+                      Product Description & Styling Formats
+                    </label>
+                    <span className="text-[10px] text-[#A87A2A] font-semibold">
+                      ✨ Click template to auto-fill format
+                    </span>
+                  </div>
+
+                  {/* 4 One-Click Description Formats (Vastramaniaa, Specs, Anarkali, Minimal) */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const vastraFormat = `${editingProduct.name || 'Royal Handcrafted Kurti Set'} with elegant silhouette — effortless everyday elegance.\n\n* Solid sweetheart neckline with graceful back detailing\n* Dramatic bell sleeves for a fluid, feminine silhouette\n* Flowy farshi / straight bottom for flattering flare\n* Soft, breathable pure natural fabric\n* Handcrafted with authentic Jaipur artisan craft\n* Sizes XS–5XL — made for every woman\n\nSet Includes: Kurta + Bottom + Dupatta\nFabric: ${editingProduct.fabric || 'Pure Cambric Cotton 60s'}\nWork: Authentic Jaipur Block Print & Gotapatti\nOccasion: Festive, Weddings & Elegant Day Wear`;
+                        setEditingProduct({ ...editingProduct, description: vastraFormat });
+                      }}
+                      className="p-1.5 rounded-xl bg-white hover:bg-[#FAF5EE] border border-amber-300 text-stone-800 text-[11px] font-bold text-left shadow-2xs hover:border-[#A87A2A] transition-colors cursor-pointer"
+                    >
+                      <span className="text-[#A87A2A] block text-[10px]">Format 1:</span>
+                      💎 Vastramaniaa Style
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const specsFormat = `Pure Handblock Printed 3-Piece Suit Set — SS VASTRA\n\n* Elegant V-neckline with delicate hand-embroidery\n* Comfortable 3/4 sleeves with gotapatti detailing\n* Tailored straight pant with elasticated waistband & pocket\n* Lightweight matching dupatta with artisan decorative border\n\nFabric: ${editingProduct.fabric || '100% Pure Jaipuri Cotton Mulmul'}\nSet Includes: Kurta, Pant & Dupatta\nKurta Length: 44 inches | Pant Length: 38 inches\nWork: Authentic Sanganeri Handblock Print\nCare: Gentle cold hand wash or dry clean`;
+                        setEditingProduct({ ...editingProduct, description: specsFormat });
+                      }}
+                      className="p-1.5 rounded-xl bg-white hover:bg-[#FAF5EE] border border-stone-200 text-stone-800 text-[11px] font-bold text-left shadow-2xs hover:border-[#A87A2A] transition-colors cursor-pointer"
+                    >
+                      <span className="text-stone-400 block text-[10px]">Format 2:</span>
+                      📋 3-Piece Suit Specs
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const anarkaliFormat = `Royal Kalidar Anarkali Suit Set with Banarasi Border — SS VASTRA\n\n* 4.5 Meter flared Kalidar silhouette for royal festive drape\n* Intricate Zari & Gotapatti hand-embroidery on yoke\n* Contrast Banarasi zari border on hemline\n* Full-length sheer organza dupatta with gotapatti tassels\n\nFabric: Pure Chanderi Silk Blend\nInner Lining: Soft Cotton Malmal\nSet Includes: Flared Anarkali + Churidar / Pant + Dupatta\nOccasion: Weddings, Festive Celebrations, Diwali & Eid`;
+                        setEditingProduct({ ...editingProduct, description: anarkaliFormat });
+                      }}
+                      className="p-1.5 rounded-xl bg-white hover:bg-[#FAF5EE] border border-stone-200 text-stone-800 text-[11px] font-bold text-left shadow-2xs hover:border-[#A87A2A] transition-colors cursor-pointer"
+                    >
+                      <span className="text-stone-400 block text-[10px]">Format 3:</span>
+                      ✨ Royal Festive Anarkali
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const minimalFormat = `Everyday Chic Straight Kurti Set — SS VASTRA\n\n* Clean contemporary straight silhouette\n* Breathable all-day comfort cotton\n* Side slits for ease of movement\n* Minimal pastel floral motifs\n\nFabric: Pure Breathable Cotton\nFit: Regular Comfort Fit\nWash Care: Machine wash gentle or cold hand wash`;
+                        setEditingProduct({ ...editingProduct, description: minimalFormat });
+                      }}
+                      className="p-1.5 rounded-xl bg-white hover:bg-[#FAF5EE] border border-stone-200 text-stone-800 text-[11px] font-bold text-left shadow-2xs hover:border-[#A87A2A] transition-colors cursor-pointer"
+                    >
+                      <span className="text-stone-400 block text-[10px]">Format 4:</span>
+                      🌿 Minimalist Daily Wear
+                    </button>
+                  </div>
+
                   <textarea
-                    rows={2}
+                    rows={6}
                     value={editingProduct.description || ''}
+                    placeholder="Type description, or click one of the 4 format buttons above..."
                     onChange={(e) => setEditingProduct({ ...editingProduct, description: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300"
+                    className="w-full p-3 rounded-xl border border-stone-300 font-sans text-xs leading-relaxed focus:outline-none focus:border-[#A87A2A] bg-white"
                   />
+
+                  {/* Quick Helper Insert Buttons */}
+                  <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                    <span className="text-stone-500 font-medium">Quick add:</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cur = editingProduct.description || '';
+                        setEditingProduct({
+                          ...editingProduct,
+                          description: cur ? `${cur}\n* New Feature Highlight` : '* New Feature Highlight',
+                        });
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-800 cursor-pointer"
+                    >
+                      + Bullet Point (*)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cur = editingProduct.description || '';
+                        setEditingProduct({
+                          ...editingProduct,
+                          description: cur ? `${cur}\nFabric: 100% Pure Cotton\nWork: Handblock Print` : 'Fabric: 100% Pure Cotton',
+                        });
+                      }}
+                      className="px-2 py-0.5 rounded-lg bg-stone-200 hover:bg-stone-300 text-stone-800 cursor-pointer"
+                    >
+                      + Spec Tag (Key: Value)
+                    </button>
+                    {editingProduct.description && (
+                      <button
+                        type="button"
+                        onClick={() => setEditingProduct({ ...editingProduct, description: '' })}
+                        className="px-2 py-0.5 rounded-lg text-rose-600 hover:bg-rose-50 ml-auto cursor-pointer"
+                      >
+                        Clear Description
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* 4 Feature Badges & Flags */}
@@ -9230,20 +9427,82 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
               </div>
 
               <form onSubmit={handleSaveTrackingDetails} className="space-y-4 pt-4 text-xs">
+                {/* Courier Partner Selection & Presets */}
+                <div className="space-y-1.5">
+                  <label className="block font-semibold text-stone-700">Courier Partner Chunein</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {[
+                      { name: 'Delhivery Express', url: 'https://www.delhivery.com/track/package/{AWB}' },
+                      { name: 'Shiprocket', url: 'https://shiprocket.co/tracking/{AWB}' },
+                      { name: 'Blue Dart', url: 'https://www.bluedart.com/tracking?handler=traking_awb&numbers={AWB}' },
+                      { name: 'DTDC Express', url: 'https://www.dtdc.in/tracking/shipment-tracking.asp?trkType=AWB&strCnno={AWB}' },
+                      { name: 'Shadowfax', url: 'https://tracker.shadowfax.in/#/track/{AWB}' },
+                      { name: 'India Post (Speed Post)', url: 'https://www.indiapost.gov.in/_layouts/15/dpt.ptc.track/track.aspx?track_number={AWB}' },
+                    ].map((c) => (
+                      <button
+                        key={c.name}
+                        type="button"
+                        onClick={() => {
+                          const awb = trackingForm.trackingNumber || `DEL${trackingModalOrder.id}${Math.floor(100000 + Math.random() * 900000)}`;
+                          setTrackingForm((prev) => ({
+                            ...prev,
+                            courierPartner: c.name,
+                            trackingNumber: prev.trackingNumber || awb,
+                            trackingUrl: c.url.replace('{AWB}', prev.trackingNumber || awb),
+                          }));
+                        }}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-semibold transition-colors cursor-pointer border ${
+                          trackingForm.courierPartner === c.name
+                            ? 'bg-[#A87A2A] text-white border-[#A87A2A]'
+                            : 'bg-stone-50 hover:bg-stone-100 text-stone-700 border-stone-200'
+                        }`}
+                      >
+                        {c.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold text-stone-700 mb-1">Courier Partner</label>
+                    <label className="block font-semibold text-stone-700 mb-1">Selected Courier</label>
                     <input
                       type="text"
                       required
                       value={trackingForm.courierPartner}
-                      placeholder="e.g. Delhivery Express, Blue Dart, Shiprocket"
+                      placeholder="e.g. Delhivery Express"
                       onChange={(e) => setTrackingForm({ ...trackingForm, courierPartner: e.target.value })}
                       className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
                     />
                   </div>
                   <div>
-                    <label className="block font-semibold text-stone-700 mb-1">AWB Tracking Number</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="font-semibold text-stone-700">AWB Tracking Number</label>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const prefix = trackingForm.courierPartner.toLowerCase().includes('shiprocket')
+                            ? 'SR'
+                            : trackingForm.courierPartner.toLowerCase().includes('dtdc')
+                            ? 'DTDC'
+                            : trackingForm.courierPartner.toLowerCase().includes('blue')
+                            ? 'BD'
+                            : 'DEL';
+                          const autoAwb = `${prefix}${trackingModalOrder.id}${Math.floor(100000 + Math.random() * 900000)}`;
+                          const urlTemplate = trackingForm.courierPartner.toLowerCase().includes('shiprocket')
+                            ? `https://shiprocket.co/tracking/${autoAwb}`
+                            : `https://www.delhivery.com/track/package/${autoAwb}`;
+                          setTrackingForm((prev) => ({
+                            ...prev,
+                            trackingNumber: autoAwb,
+                            trackingUrl: urlTemplate,
+                          }));
+                        }}
+                        className="text-[10px] text-[#A87A2A] font-bold hover:underline cursor-pointer"
+                      >
+                        ⚡ Auto-Generate AWB
+                      </button>
+                    </div>
                     <input
                       type="text"
                       required
@@ -9263,7 +9522,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block font-semibold text-stone-700 mb-1">Tracking Web URL</label>
+                  <label className="block font-semibold text-stone-700 mb-1">Live Official Tracking URL</label>
                   <div className="flex gap-2">
                     <input
                       type="url"
@@ -9277,12 +9536,15 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         href={trackingForm.trackingUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="px-3 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 flex items-center shrink-0"
-                        title="Test Tracking Link"
+                        className="px-3.5 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white flex items-center gap-1.5 shrink-0 font-bold transition-colors shadow-xs"
+                        title="Test Official Live Tracking Link"
                       >
-                        <ExternalLink className="w-4 h-4" />
+                        <span>Test Link</span>
+                        <ExternalLink className="w-3.5 h-3.5" />
                       </a>
                     )}
+                  </div>
+                </div>
                   </div>
                 </div>
 
@@ -9357,27 +9619,43 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   </div>
                 </div>
 
-                {/* Display Current Timeline Events if available */}
-                {((trackingModalOrder as any).shipment?.events?.length > 0 || (trackingModalOrder as any).shipment?.statusUpdates?.length > 0) && (
-                  <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
-                    <h5 className="font-bold text-stone-700 mb-2">Past Tracking Timeline:</h5>
-                    <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                      {((trackingModalOrder as any).shipment?.events || (trackingModalOrder as any).shipment?.statusUpdates || []).map((ev: any, idx: number) => (
-                        <div key={idx} className="flex items-start gap-2 text-[11px] pb-2 border-b border-stone-200 last:border-0 last:pb-0">
-                          <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
-                          <div className="flex-1">
-                            <span className="font-bold text-stone-800">{ev.status || ev.title}</span>
-                            {ev.location && <span className="text-stone-500"> • {ev.location}</span>}
-                            <p className="text-stone-600">{ev.note || ev.description}</p>
+                {/* Display Current Timeline Events if available (Crash-Proof Parsing) */}
+                {(() => {
+                  const ship = (trackingModalOrder as any)?.shipment;
+                  if (!ship) return null;
+                  let raw = ship.events ?? ship.statusUpdates;
+                  if (!raw) return null;
+                  if (typeof raw === 'string') {
+                    try {
+                      raw = JSON.parse(raw);
+                    } catch {
+                      raw = [{ status: 'Status', description: raw, timestamp: new Date().toISOString() }];
+                    }
+                  }
+                  const safeList = Array.isArray(raw) ? raw : (typeof raw === 'object' ? Object.values(raw) : []);
+                  if (safeList.length === 0) return null;
+
+                  return (
+                    <div className="p-3 bg-stone-50 rounded-xl border border-stone-200">
+                      <h5 className="font-bold text-stone-700 mb-2">Past Tracking Timeline:</h5>
+                      <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
+                        {safeList.map((ev: any, idx: number) => (
+                          <div key={idx} className="flex items-start gap-2 text-[11px] pb-2 border-b border-stone-200 last:border-0 last:pb-0">
+                            <CheckCircle className="w-3.5 h-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                            <div className="flex-1">
+                              <span className="font-bold text-stone-800">{ev.status || ev.title}</span>
+                              {ev.location && <span className="text-stone-500"> • {ev.location}</span>}
+                              <p className="text-stone-600">{ev.note || ev.description}</p>
+                            </div>
+                            <span className="text-[10px] text-stone-400 shrink-0">
+                              {ev.timestamp ? new Date(ev.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
+                            </span>
                           </div>
-                          <span className="text-[10px] text-stone-400 shrink-0">
-                            {ev.timestamp ? new Date(ev.timestamp).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : ''}
-                          </span>
-                        </div>
-                      ))}
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                )}
+                  );
+                })()}
 
                 <div className="pt-3 border-t border-stone-200 flex items-center justify-between">
                   <button

@@ -99,8 +99,8 @@ export const AdminInvoiceModal: React.FC<AdminInvoiceModalProps> = ({
       setCity(order.city || 'Jaipur');
       setState(order.state || 'Rajasthan');
       setPincode(order.pincode || '303905');
-      setCourierName((order as any).courierName || (order as any).courierPartner || 'Delhivery Express');
-      setTrackingNumber(order.trackingNumber || `SSVTRK${order.id}9812`);
+      setCourierName((order as any).shipment?.courierPartner || (order as any).shipment?.courierName || (order as any).courierName || (order as any).courierPartner || 'Delhivery Express');
+      setTrackingNumber((order as any).shipment?.trackingNumber || order.trackingNumber || `SSVTRK${order.id}9812`);
       setPaymentMethod(order.paymentMethod || 'razorpay');
       setPaymentStatus(order.paymentStatus || 'paid');
       setOrderStatus(order.orderStatus || 'Confirmed');
