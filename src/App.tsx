@@ -23,6 +23,7 @@ import { DeepLinkModal } from './components/DeepLinkModal.tsx';
 import { WishlistDrawer } from './components/WishlistDrawer.tsx';
 import { QuickEditProductModal } from './components/QuickEditProductModal.tsx';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal.tsx';
+import { VideoReelsSection } from './components/VideoReelsSection.tsx';
 import { Product, Category, CartItem, Banner } from './types.ts';
 import { sanitizeProductList } from './utils/productUtils.ts';
 
@@ -699,26 +700,26 @@ export function App() {
   };
 
   // Cart operations
-  const handleAddToCart = (product: Product, size: string, quantity = 1) => {
+  const handleAddToCart = (product: Product, size: string, quantity = 1, color?: string) => {
     setCartItems((prev) => {
       const existingIdx = prev.findIndex(
-        (i) => i.product.id === product.id && i.size === size
+        (i) => i.product.id === product.id && i.size === size && (color ? i.color === color : true)
       );
       if (existingIdx >= 0) {
         const updated = [...prev];
         updated[existingIdx].quantity += quantity;
         return updated;
       }
-      return [...prev, { product, size, quantity }];
+      return [...prev, { product, size, quantity, color: color || product.color }];
     });
     setCartDrawerOpen(true);
   };
 
-  const handleUpdateQuantity = (productId: number, size: string, delta: number) => {
+  const handleUpdateQuantity = (productId: number, size: string, delta: number, color?: string) => {
     setCartItems((prev) =>
       prev
         .map((item) => {
-          if (item.product.id === productId && item.size === size) {
+          if (item.product.id === productId && item.size === size && (!color || item.color === color)) {
             const newQty = item.quantity + delta;
             return newQty > 0 ? { ...item, quantity: newQty } : null;
           }
@@ -728,9 +729,9 @@ export function App() {
     );
   };
 
-  const handleRemoveItem = (productId: number, size: string) => {
+  const handleRemoveItem = (productId: number, size: string, color?: string) => {
     setCartItems((prev) =>
-      prev.filter((i) => !(i.product.id === productId && i.size === size))
+      prev.filter((i) => !(i.product.id === productId && i.size === size && (!color || i.color === color)))
     );
   };
 
@@ -740,8 +741,8 @@ export function App() {
     setAppliedCouponCode('');
   };
 
-  const handleInstantBuy = (product: Product, size: string, quantity = 1) => {
-    handleAddToCart(product, size, quantity);
+  const handleInstantBuy = (product: Product, size: string, quantity = 1, color?: string) => {
+    handleAddToCart(product, size, quantity, color);
     setDetailProduct(null);
     setCartDrawerOpen(false);
     setCheckoutModalOpen(true);
@@ -812,6 +813,7 @@ export function App() {
         isAdminLoggedIn={isAdminLoggedIn}
         wishlistCount={wishlistIds.length}
         onOpenWishlist={() => setWishlistDrawerOpen(true)}
+        customerName={customerProfile?.name}
       />
 
       {/* 2. Hero Banner Slider */}
@@ -831,6 +833,13 @@ export function App() {
           setActiveTab('all');
           document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' });
         }}
+      />
+
+      {/* 3.5. 9:16 Portrait Video Reels Section (Watch, Love & Shop) */}
+      <VideoReelsSection
+        products={products}
+        onSelectProduct={(product) => handleOpenProductDetail(product)}
+        onOpenQuickBuy={(product) => handleInstantBuy(product, 'M', 1)}
       />
 
       {/* 4. Main Product Catalog Section with 2-Column Mobile Grid */}

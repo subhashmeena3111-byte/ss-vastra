@@ -13,6 +13,7 @@ export interface Product {
   description: string;
   fabric?: string;
   color?: string;
+  colors?: string[];
   highlights?: string[];
   isNewArrival?: boolean;
   isBestSeller?: boolean;
@@ -21,6 +22,21 @@ export interface Product {
   isOutfit?: boolean;
   isActive?: boolean;
   isDemo?: boolean;
+}
+
+export interface VideoReel {
+  id: number;
+  title: string;
+  videoUrl: string;
+  posterUrl?: string;
+  productId?: number;
+  productTitle?: string;
+  productPrice?: number;
+  productImage?: string;
+  badge?: string;
+  displayOrder?: number;
+  isActive: boolean;
+  createdAt?: string;
 }
 
 export interface Category {
@@ -49,6 +65,7 @@ export interface Banner {
 export interface CartItem {
   product: Product;
   size: string;
+  color?: string;
   quantity: number;
 }
 
@@ -77,6 +94,7 @@ export interface OrderItem {
   productName: string;
   productImage?: string;
   size: string;
+  color?: string;
   quantity: number;
   unitPrice: number;
   totalPrice: number;

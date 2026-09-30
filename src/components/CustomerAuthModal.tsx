@@ -13,6 +13,7 @@ import {
   Loader2,
   Sparkles,
   ArrowLeft,
+  MessageCircle,
 } from 'lucide-react';
 
 interface CustomerProfile {
@@ -99,6 +100,10 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
       const data = await res.json();
       if (!data.success) {
         throw new Error(data.error || 'Failed to send OTP');
+      }
+
+      if (data.existingName && !name.trim()) {
+        setName(data.existingName);
       }
 
       setStep('otp');
@@ -263,21 +268,24 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
           ) : step === 'input' ? (
             /* STEP 1: Phone & Details Form */
             <form onSubmit={handleSendOtp} className="space-y-4">
-              {mode === 'signup' && (
-                <div>
-                  <label className="block text-xs font-semibold text-stone-700 mb-1">
-                    Poora Naam (Full Name) *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Priya Sharma"
-                    className="w-full px-3.5 py-2.5 bg-[#FBF7F0] border border-[#E9A9BB]/50 rounded-xl text-sm text-[#2B2320] focus:outline-none focus:ring-2 focus:ring-[#A87A2A]"
-                  />
-                </div>
-              )}
+              <div>
+                <label className="block text-xs font-semibold text-stone-700 mb-1">
+                  {mode === 'signup' ? 'Poora Naam (Full Name) *' : 'Aapka Naam (Customer Full Name)'}
+                </label>
+                <input
+                  type="text"
+                  required={mode === 'signup'}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Ananya Sharma"
+                  className="w-full px-3.5 py-2.5 bg-[#FBF7F0] border border-[#E9A9BB]/50 rounded-xl text-sm text-[#2B2320] focus:outline-none focus:ring-2 focus:ring-[#A87A2A]"
+                />
+                <p className="text-[10px] text-stone-400 mt-0.5">
+                  {mode === 'signup'
+                    ? 'Aapke orders aur invoices par yahi naam aayega.'
+                    : 'Apna real naam likhein taaki aapke order me aapka sahi naam show ho.'}
+                </p>
+              </div>
 
               <div>
                 <label className="block text-xs font-semibold text-stone-700 mb-1">
@@ -455,6 +463,19 @@ export const CustomerAuthModal: React.FC<CustomerAuthModalProps> = ({
                   </>
                 )}
               </button>
+
+              {/* WhatsApp OTP Assistance Option */}
+              <div className="pt-1">
+                <a
+                  href={`https://wa.me/919783770735?text=${encodeURIComponent(`Namaste SS VASTRA! Kripya mujhe login verification OTP bhej dijiye. Mobile: +91 ${phone.replace(/\D/g, '').slice(-10)}`)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-center gap-2 py-2 px-3 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl text-xs font-semibold transition-colors w-full"
+                >
+                  <MessageCircle className="w-4 h-4 text-emerald-600" />
+                  <span>📲 WhatsApp par bhi OTP prapt karein</span>
+                </a>
+              </div>
 
               {/* Resend OTP */}
               <div className="flex items-center justify-between text-xs text-stone-500 pt-2 border-t border-stone-100">

@@ -34,6 +34,7 @@ interface NavbarProps {
   isAdminLoggedIn?: boolean;
   wishlistCount?: number;
   onOpenWishlist?: () => void;
+  customerName?: string;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -51,6 +52,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   isAdminLoggedIn,
   wishlistCount = 0,
   onOpenWishlist,
+  customerName,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
@@ -195,11 +197,22 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   type="button"
                   onClick={onOpenCustomerAuth}
-                  className="p-2 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors"
-                  title="Customer Sign In / Profile"
+                  className="flex items-center gap-1.5 px-2.5 py-1 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors"
+                  title={customerName ? `Namaste ${customerName}` : 'Customer Sign In / Profile'}
                   aria-label="Customer Profile"
                 >
-                  <User className="w-5 h-5" />
+                  <div className="w-8 h-8 rounded-full bg-[#F7E3E8] border border-[#A87A2A]/40 flex items-center justify-center text-[#A87A2A] shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  {customerName ? (
+                    <span className="hidden md:inline text-xs font-bold text-[#2B2320] max-w-[90px] truncate">
+                      {customerName.split(' ')[0]}
+                    </span>
+                  ) : (
+                    <span className="hidden xl:inline text-xs font-medium text-stone-600">
+                      Sign In
+                    </span>
+                  )}
                 </button>
               )}
 
@@ -338,7 +351,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="w-full flex items-center gap-3 px-3 py-2.5 text-[14px] font-medium text-[#2B2320] bg-white rounded-lg border border-[#E9A9BB]/40 shadow-xs"
                 >
                   <User className="w-4 h-4 text-[#A87A2A]" />
-                  <span>Customer Login / Profile</span>
+                  <span>{customerName ? `Namaste, ${customerName} (Profile)` : 'Customer Login / Profile'}</span>
                 </button>
               )}
 

@@ -29,6 +29,7 @@ export interface LocalProduct {
   description: string;
   fabric: string;
   color: string;
+  colors?: string[];
   highlights: string;
   isNewArrival: boolean;
   isBestSeller: boolean;
@@ -149,6 +150,21 @@ export interface LocalCustomerActivity {
   createdAt: string;
 }
 
+export interface LocalVideoReel {
+  id: number;
+  title: string;
+  videoUrl: string;
+  posterUrl?: string;
+  productId?: number;
+  productTitle?: string;
+  productPrice?: number;
+  productImage?: string;
+  badge?: string;
+  displayOrder?: number;
+  isActive: boolean;
+  createdAt?: string;
+}
+
 export interface LocalStoreData {
   categories: LocalCategory[];
   products: LocalProduct[];
@@ -161,6 +177,7 @@ export interface LocalStoreData {
   customProducts?: LocalProduct[];
   visitorLogs?: LocalVisitorLog[];
   customerActivities?: LocalCustomerActivity[];
+  videoReels?: LocalVideoReel[];
   activityLogs: Array<{
     id: number;
     adminId?: string;
@@ -471,6 +488,61 @@ function createInitialData(): LocalStoreData {
     ]),
   };
 
+  const videoReels: LocalVideoReel[] = [
+    {
+      id: 1,
+      title: 'Royal Anarkali Handblock Drape',
+      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-an-orange-dress-41130-large.mp4',
+      posterUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+      productTitle: 'Pure Cambric Cotton Jaipuri Anarkali Suit',
+      productPrice: 2499,
+      productImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+      badge: 'Trending 🔥',
+      displayOrder: 1,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 2,
+      title: 'Jaipur Handcrafted Farshi Suit Fit',
+      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-posing-in-a-white-dress-and-a-hat-41133-large.mp4',
+      posterUrl: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+      productTitle: 'Blush Pink Cotton Farshi Suit Set',
+      productPrice: 1850,
+      productImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+      badge: 'New Arrival ✨',
+      displayOrder: 2,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 3,
+      title: 'Festive Banarasi & Zari Elegance',
+      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-woman-with-curly-hair-posing-41135-large.mp4',
+      posterUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
+      productTitle: 'Pista Green Rayon Kurta Farshi Set',
+      productPrice: 2150,
+      productImage: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
+      badge: 'Best Seller 👑',
+      displayOrder: 3,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 4,
+      title: 'Mustard Cotton Kurti Flare Look',
+      videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-model-posing-in-a-leather-jacket-41134-large.mp4',
+      posterUrl: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+      productTitle: 'White & Mustard Embroidered Kurta Set',
+      productPrice: 1850,
+      productImage: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+      badge: 'Must Have 💖',
+      displayOrder: 4,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    },
+  ];
+
   return {
     categories,
     products,
@@ -481,6 +553,7 @@ function createInitialData(): LocalStoreData {
     settings,
     visitorLogs: [],
     customerActivities: [],
+    videoReels,
     activityLogs: [],
   };
 }
@@ -520,6 +593,9 @@ class LocalStoreManager {
       if (!Array.isArray(parsed.visitorLogs)) parsed.visitorLogs = [];
       if (!Array.isArray(parsed.customerActivities)) parsed.customerActivities = [];
       if (!Array.isArray(parsed.orders)) parsed.orders = [];
+      if (!Array.isArray(parsed.videoReels) || parsed.videoReels.length === 0) {
+        parsed.videoReels = createInitialData().videoReels;
+      }
       return parsed as LocalStoreData;
     };
 
@@ -1101,6 +1177,120 @@ class LocalStoreManager {
       todayLogins,
       totalCustomerActivities: cActs.length,
     };
+  }
+
+  // Video Reels (9:16 Portrait Reels)
+  getVideoReels(): LocalVideoReel[] {
+    if (!this.data.videoReels || !Array.isArray(this.data.videoReels) || this.data.videoReels.length === 0) {
+      this.data.videoReels = [
+        {
+          id: 1,
+          title: 'Royal Anarkali Handblock Drape',
+          videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-an-orange-dress-41130-large.mp4',
+          posterUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+          productTitle: 'Pure Cambric Cotton Jaipuri Anarkali Suit',
+          productPrice: 2499,
+          productImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+          badge: 'Trending 🔥',
+          displayOrder: 1,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 2,
+          title: 'Jaipur Handcrafted Farshi Suit Fit',
+          videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-posing-in-a-white-dress-and-a-hat-41133-large.mp4',
+          posterUrl: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+          productTitle: 'Blush Pink Cotton Farshi Suit Set',
+          productPrice: 1850,
+          productImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+          badge: 'New Arrival ✨',
+          displayOrder: 2,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 3,
+          title: 'Festive Banarasi & Zari Elegance',
+          videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-woman-with-curly-hair-posing-41135-large.mp4',
+          posterUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
+          productTitle: 'Pista Green Rayon Kurta Farshi Set',
+          productPrice: 2150,
+          productImage: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
+          badge: 'Best Seller 👑',
+          displayOrder: 3,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+        {
+          id: 4,
+          title: 'Mustard Cotton Kurti Flare Look',
+          videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-model-posing-in-a-leather-jacket-41134-large.mp4',
+          posterUrl: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+          productTitle: 'White & Mustard Embroidered Kurta Set',
+          productPrice: 1850,
+          productImage: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
+          badge: 'Must Have 💖',
+          displayOrder: 4,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        },
+      ];
+    }
+    return [...this.data.videoReels].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+  }
+
+  addVideoReel(reel: Omit<LocalVideoReel, 'id' | 'createdAt'>): LocalVideoReel {
+    if (!this.data.videoReels) this.data.videoReels = [];
+    const newId = this.data.videoReels.reduce((max, r) => Math.max(max, r.id || 0), 0) + 1;
+    const entry: LocalVideoReel = {
+      ...reel,
+      id: newId,
+      createdAt: new Date().toISOString(),
+    };
+    this.data.videoReels.push(entry);
+    this.saveData();
+    return entry;
+  }
+
+  updateVideoReel(id: number, updates: Partial<LocalVideoReel>): LocalVideoReel | null {
+    if (!this.data.videoReels) this.data.videoReels = [];
+    const idx = this.data.videoReels.findIndex((r) => r.id === id);
+    if (idx === -1) return null;
+    this.data.videoReels[idx] = { ...this.data.videoReels[idx], ...updates };
+    this.saveData();
+    return this.data.videoReels[idx];
+  }
+
+  deleteVideoReel(id: number): boolean {
+    if (!this.data.videoReels) return false;
+    const prev = this.data.videoReels.length;
+    this.data.videoReels = this.data.videoReels.filter((r) => r.id !== id);
+    if (this.data.videoReels.length !== prev) {
+      this.saveData();
+      return true;
+    }
+    return false;
+  }
+
+  // Update Admin Profile (Username, Email, Phone, Password)
+  updateAdminProfile(
+    identifier: string | number,
+    updates: { name?: string; email?: string; phone?: string; passwordHash?: string; adminId?: string }
+  ): LocalAdmin | null {
+    const idStr = String(identifier).toLowerCase().trim();
+    const idx = this.data.admins.findIndex(
+      (a) =>
+        String(a.id) === idStr ||
+        a.adminId.toLowerCase() === idStr ||
+        a.email.toLowerCase() === idStr ||
+        (a.role === 'super_admin' && (idStr === '1' || idStr === '1000' || idStr === 'admin'))
+    );
+
+    if (idx === -1) return null;
+    this.data.admins[idx] = { ...this.data.admins[idx], ...updates };
+    this.saveData();
+    return this.data.admins[idx];
   }
 }
 

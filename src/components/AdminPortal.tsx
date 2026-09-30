@@ -58,6 +58,10 @@ import {
   Save,
   FileEdit,
   Undo2,
+  Film,
+  Video,
+  Palette,
+  MessageSquare,
 } from 'lucide-react';
 import {
   AdminUser,
@@ -69,6 +73,7 @@ import {
   PaymentGateway,
   BankAccount,
   UpiAccount,
+  VideoReel,
 } from '../types.ts';
 import { AdminInvoiceModal } from './AdminInvoiceModal.tsx';
 import { AdminCatalogImages } from './AdminCatalogImages.tsx';
@@ -214,6 +219,30 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const slot2InputRef = useRef<HTMLInputElement>(null);
   const slot3InputRef = useRef<HTMLInputElement>(null);
   const slot4InputRef = useRef<HTMLInputElement>(null);
+
+  // Custom Category & Color Input States
+  const [isCustomCategory, setIsCustomCategory] = useState(false);
+  const [newColorInput, setNewColorInput] = useState('');
+
+  // Video Reels Studio State
+  const [reelsList, setReelsList] = useState<VideoReel[]>([]);
+  const [editingReel, setEditingReel] = useState<Partial<VideoReel> | null>(null);
+  const [showReelModal, setShowReelModal] = useState(false);
+  const [isSavingReel, setIsSavingReel] = useState(false);
+
+  // Admin Profile & Password Update State
+  const [adminProfileForm, setAdminProfileForm] = useState({
+    name: '',
+    adminId: '',
+    email: '',
+    phone: '',
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: '',
+  });
+  const [showAdminPass, setShowAdminPass] = useState(false);
+  const [isUpdatingProfile, setIsUpdatingProfile] = useState(false);
+  const [profileUpdateMsg, setProfileUpdateMsg] = useState<{ success?: boolean; message?: string } | null>(null);
 
   // Manual Customer Order CRUD State
   const [showAddOrderModal, setShowAddOrderModal] = useState(false);
@@ -1195,6 +1224,10 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
   // Order Actions
   const handleUpdateOrderStatus = async (orderId: number, status: string) => {
+    // Optimistic state update in ordersList
+    setOrdersList((prev) =>
+      prev.map((o) => (o.id === orderId ? { ...o, orderStatus: status, status } : o))
+    );
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -1208,10 +1241,169 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       if (data.success) {
         setActionMessage(`Order #${orderId} marked as ${status}`);
         setTimeout(() => setActionMessage(null), 3000);
+      } else {
+        alert(data.error || 'Failed to update order status');
         loadTabData('orders');
       }
     } catch {
       alert('Failed to update status');
+      loadTabData('orders');
+    }
+  };
+
+  const handleSendWhatsAppOrderNotification = (ord: Order) => {
+    const cleanPhone = (ord.customerPhone || '').replace(/\D/g, '').slice(-10);
+    if (!cleanPhone) {
+      alert('Is order me customer mobile number uplabdh nahi hai.');
+      return;
+    }
+    const currentStatus = ord.orderStatus || ord.status || 'Confirmed';
+    const statusEmojis: Record<string, string> = {
+      Placed: '📝',
+      Confirmed: '✅',
+      Processing: '🧵',
+      Packed: '📦',
+      Shipped: '🚚',
+      'In Transit': '✈️',
+      'Out for Delivery': '🛵',
+      Delivered: '🎉',
+      Cancelled: '❌',
+      Returned: '↩️',
+    };
+    const emoji = statusEmojis[currentStatus] || '✨';
+    const trackingLink = `https://ss-vastra-ten.vercel.app/?track=${ord.orderNumber}&phone=${cleanPhone}`;
+
+    const text = `Namaste ${ord.customerName}! 🌸\n\nSS VASTRA Jaipur ki taraf se aapka order update:\n${emoji} *Order #${ord.orderNumber}* ka status abhi *${currentStatus.toUpperCase()}* ho gaya hai.\n\n💰 Total Amount: ₹${ord.totalAmount.toLocaleString('en-IN')}\n💳 Payment: ${(ord.paymentStatus || 'pending').toUpperCase()} (${(ord.paymentMethod || 'COD').toUpperCase()})\n\n📍 Live Tracking & Delivery Details:\n${trackingLink}\n\nKisi bhi sahayata ke liye hume WhatsApp par reply karein.\nDhanyawad,\n*SS VASTRA Jaipur* - Authentic Handcrafted Fashion`;
+
+    const waUrl = `https://wa.me/91${cleanPhone}?text=${encodeURIComponent(text)}`;
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  // Video Reels Studio Handlers
+  const loadReelsData = async () => {
+    try {
+      const res = await fetch('/api/reels');
+      const data = await res.json();
+      if (data.success && Array.isArray(data.reels)) {
+        setReelsList(data.reels);
+      }
+    } catch {}
+  };
+
+  const handleSaveReel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingReel || !editingReel.title || !editingReel.videoUrl) {
+      alert('Kripya Reel Title aur Video MP4 URL dono bharein.');
+      return;
+    }
+    setIsSavingReel(true);
+    try {
+      const isEdit = Boolean(editingReel.id);
+      const url = isEdit ? `/api/admin/reels/${editingReel.id}` : '/api/admin/reels';
+      const method = isEdit ? 'PUT' : 'POST';
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(editingReel),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setActionMessage(isEdit ? 'Reel successfully updated!' : 'New video reel added successfully!');
+        setTimeout(() => setActionMessage(null), 3000);
+        setShowReelModal(false);
+        setEditingReel(null);
+        loadReelsData();
+      } else {
+        alert(data.error || 'Failed to save reel');
+      }
+    } catch {
+      alert('Server error saving reel');
+    } finally {
+      setIsSavingReel(false);
+    }
+  };
+
+  const handleDeleteReel = async (id: number, title: string) => {
+    if (!window.confirm(`Kya aap reel "${title}" ko delete karna chahte hain?`)) return;
+    try {
+      const res = await fetch(`/api/admin/reels/${id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const data = await res.json();
+      if (data.success) {
+        setActionMessage('Reel successfully removed');
+        setTimeout(() => setActionMessage(null), 3000);
+        loadReelsData();
+      }
+    } catch {
+      alert('Failed to delete reel');
+    }
+  };
+
+  // Admin Profile & Credentials Update Handler
+  const handleUpdateAdminProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileUpdateMsg(null);
+
+    if (adminProfileForm.newPassword) {
+      if (adminProfileForm.newPassword.length < 8) {
+        setProfileUpdateMsg({ success: false, message: 'Naya password kam se kam 8 characters ka hona chahiye.' });
+        return;
+      }
+      if (adminProfileForm.newPassword !== adminProfileForm.confirmPassword) {
+        setProfileUpdateMsg({ success: false, message: 'New Password aur Confirm Password match nahi kar rahe hain.' });
+        return;
+      }
+    }
+
+    setIsUpdatingProfile(true);
+    try {
+      const res = await fetch('/api/admin/update-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: adminProfileForm.name.trim() || undefined,
+          email: adminProfileForm.email.trim() || undefined,
+          adminId: adminProfileForm.adminId.trim() || undefined,
+          phone: adminProfileForm.phone.trim() || undefined,
+          currentPassword: adminProfileForm.currentPassword || undefined,
+          newPassword: adminProfileForm.newPassword || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setProfileUpdateMsg({ success: true, message: 'Admin profile aur credentials safalta se update ho gaye hain!' });
+        if (data.token) {
+          localStorage.setItem('ss_vastra_admin_token', data.token);
+          setToken(data.token);
+        }
+        if (data.admin) {
+          localStorage.setItem('ss_vastra_admin_user', JSON.stringify(data.admin));
+          setCurrentAdmin(data.admin);
+        }
+        setAdminProfileForm((prev) => ({
+          ...prev,
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: '',
+        }));
+      } else {
+        setProfileUpdateMsg({ success: false, message: data.error || 'Profile update nahi ho saka.' });
+      }
+    } catch {
+      setProfileUpdateMsg({ success: false, message: 'Server se connect nahi ho saka.' });
+    } finally {
+      setIsUpdatingProfile(false);
     }
   };
 
@@ -3226,6 +3418,21 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <span>Invoices & Receipts</span>
               </button>
 
+              <button
+                onClick={() => {
+                  setActiveTab('reels');
+                  loadReelsData();
+                }}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
+                  activeTab === 'reels'
+                    ? 'bg-[#A87A2A] text-white shadow-xs'
+                    : 'hover:bg-stone-800 hover:text-white'
+                }`}
+              >
+                <Film className="w-4 h-4" />
+                <span>Video Reels (9:16)</span>
+              </button>
+
               {/* Super Admin Restricted Tabs */}
               {currentAdmin.role === 'super_admin' ? (
                 <>
@@ -3628,6 +3835,16 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   </td>
                                   <td className="p-3 text-right">
                                     <div className="flex items-center justify-end gap-1.5">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleSendWhatsAppOrderNotification(ord)}
+                                        className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-[11px] flex items-center gap-1 border border-emerald-300 transition-colors shadow-2xs cursor-pointer"
+                                        title="Customer ko WhatsApp par Order Confirmation / Update bhejein"
+                                      >
+                                        <MessageSquare className="w-3.5 h-3.5 text-emerald-600" />
+                                        <span>WhatsApp</span>
+                                      </button>
+
                                       <button
                                         type="button"
                                         onClick={() => handleOpenTrackingModal(ord)}
@@ -4376,6 +4593,187 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </div>
 
                       </div>
+                    </div>
+                  )}
+
+                  {/* TAB: VIDEO REELS STUDIO (9:16 PORTRAIT) */}
+                  {activeTab === 'reels' && (
+                    <div className="space-y-6 animate-in fade-in">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="font-serif text-2xl font-bold text-[#2B2320]">
+                              Video Reels Studio (9:16 Portrait)
+                            </h2>
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F7E3E8] text-[#A87A2A] border border-[#E9A9BB]/60">
+                              Watch • Love • Shop
+                            </span>
+                          </div>
+                          <p className="text-xs text-stone-500 mt-1">
+                            Homepage par vastramaniaa.com jaisa 9:16 mobile video reels section manage karein. Har video ke sath outfit product pin karein.
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={loadReelsData}
+                            className="p-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 transition-colors"
+                            title="Refresh Reels"
+                          >
+                            <RefreshCw className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingReel({
+                                title: '',
+                                videoUrl: '',
+                                posterUrl: '',
+                                productTitle: '',
+                                productPrice: 1999,
+                                productImage: '',
+                                badge: 'Trending 🔥',
+                                displayOrder: (reelsList.length || 0) + 1,
+                                isActive: true,
+                              });
+                              setShowReelModal(true);
+                            }}
+                            className="px-4 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                          >
+                            <Plus className="w-4 h-4" />
+                            <span>+ Add New Reel (9:16)</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Reels Cards Grid */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {reelsList.map((reel) => (
+                          <div
+                            key={reel.id}
+                            className="bg-white rounded-3xl border border-stone-200 overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                          >
+                            {/* 9:16 Video Preview Card */}
+                            <div className="aspect-[9/16] bg-stone-900 relative overflow-hidden group">
+                              <video
+                                src={reel.videoUrl}
+                                poster={reel.posterUrl}
+                                loop
+                                muted
+                                playsInline
+                                onMouseEnter={(e) => e.currentTarget.play().catch(() => {})}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.pause();
+                                  e.currentTarget.currentTime = 0;
+                                }}
+                                className="w-full h-full object-cover"
+                              />
+                              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
+
+                              {/* Top Badge */}
+                              <div className="absolute top-3 left-3 right-3 flex items-center justify-between">
+                                <span className="px-2.5 py-0.5 rounded-full bg-black/60 backdrop-blur-md text-white text-[10px] font-bold border border-white/20">
+                                  {reel.badge || 'Trending 🔥'}
+                                </span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                    reel.isActive !== false ? 'bg-emerald-500 text-white' : 'bg-stone-500 text-white'
+                                  }`}
+                                >
+                                  {reel.isActive !== false ? 'Active' : 'Hidden'}
+                                </span>
+                              </div>
+
+                              {/* Bottom Pinned Product Pill Preview */}
+                              <div className="absolute bottom-3 left-3 right-3 p-2 bg-white/95 backdrop-blur-md rounded-xl border border-white/40 flex items-center gap-2">
+                                <div className="w-9 h-11 rounded-lg overflow-hidden shrink-0 border border-stone-200 bg-stone-100">
+                                  <img
+                                    src={reel.productImage || reel.posterUrl}
+                                    alt={reel.productTitle || reel.title}
+                                    className="w-full h-full object-cover"
+                                  />
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <p className="text-[11px] font-bold text-[#2B2320] truncate">
+                                    {reel.productTitle || reel.title}
+                                  </p>
+                                  <p className="text-[10px] font-extrabold text-[#A87A2A]">
+                                    ₹{(reel.productPrice || 1999).toLocaleString('en-IN')}
+                                  </p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Card Footer Controls */}
+                            <div className="p-4 border-t border-stone-100 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <h3 className="font-serif text-sm font-bold text-[#2B2320] truncate">
+                                  {reel.title}
+                                </h3>
+                                <span className="text-[10px] text-stone-400 font-mono">
+                                  Order #{reel.displayOrder || 1}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between gap-2 pt-2 border-t border-stone-100">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingReel(reel);
+                                    setShowReelModal(true);
+                                  }}
+                                  className="px-3 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <Edit className="w-3.5 h-3.5" />
+                                  <span>Edit</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteReel(reel.id, reel.title)}
+                                  className="px-3 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {reelsList.length === 0 && (
+                        <div className="text-center py-16 bg-white rounded-3xl border border-stone-200 p-8">
+                          <Film className="w-12 h-12 text-stone-300 mx-auto mb-3" />
+                          <h3 className="font-serif text-lg font-bold text-[#2B2320] mb-1">
+                            Koi Video Reel Uplabdh Nahi Hai
+                          </h3>
+                          <p className="text-xs text-stone-500 max-w-md mx-auto mb-4">
+                            Apne phone se capture kiya 9:16 vertical video ya mixkit video URL daalein aur storefront par live dikhayein.
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingReel({
+                                title: 'SS VASTRA Festive Drape Look',
+                                videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-an-orange-dress-41130-large.mp4',
+                                posterUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+                                productTitle: 'Pure Cambric Cotton Jaipuri Anarkali Suit',
+                                productPrice: 2499,
+                                productImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+                                badge: 'Trending 🔥',
+                                displayOrder: 1,
+                                isActive: true,
+                              });
+                              setShowReelModal(true);
+                            }}
+                            className="px-4 py-2 bg-[#A87A2A] text-white rounded-xl text-xs font-bold hover:bg-[#8e6520]"
+                          >
+                            + Pehli 9:16 Video Reel Add Karein
+                          </button>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -6216,6 +6614,249 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             </div>
                           </div>
 
+                          {/* Multiple WhatsApp Helplines Configuration (2+ Numbers) */}
+                          <div className="pt-4 border-t border-stone-100 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <MessageCircle className="w-5 h-5 text-emerald-600" />
+                              <div>
+                                <span className="font-serif font-bold text-stone-800 text-sm">
+                                  Multiple WhatsApp Support Helplines (2+ Numbers)
+                                </span>
+                                <p className="text-[10px] text-stone-500">
+                                  Storefront ke floating WhatsApp widget me yeh departments aur mobile numbers live dikhenge.
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                              {/* Channel 1 */}
+                              <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-xl space-y-1.5">
+                                <span className="font-bold text-[#A87A2A] text-[11px] block">
+                                  Channel 1: Styling & New Orders
+                                </span>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">Agent / Staff Name</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Pooja (Styling & Orders)"
+                                    value={settingsMap['support_name_1'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_name_1: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">WhatsApp Number (10 digits)</label>
+                                  <input
+                                    type="tel"
+                                    placeholder="9783770735"
+                                    value={settingsMap['support_whatsapp_1'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_whatsapp_1: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white font-mono"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Channel 2 */}
+                              <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-xl space-y-1.5">
+                                <span className="font-bold text-amber-700 text-[11px] block">
+                                  Channel 2: Delivery & Tracking Help
+                                </span>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">Agent / Staff Name</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Ramesh (Dispatch & Delivery)"
+                                    value={settingsMap['support_name_2'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_name_2: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">WhatsApp Number (10 digits)</label>
+                                  <input
+                                    type="tel"
+                                    placeholder="9829012345"
+                                    value={settingsMap['support_whatsapp_2'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_whatsapp_2: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white font-mono"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Channel 3 */}
+                              <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-xl space-y-1.5">
+                                <span className="font-bold text-emerald-700 text-[11px] block">
+                                  Channel 3: Custom Sizing & Atelier
+                                </span>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">Agent / Staff Name</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Masterji (Jaipur Atelier)"
+                                    value={settingsMap['support_name_3'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_name_3: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">WhatsApp Number (10 digits)</label>
+                                  <input
+                                    type="tel"
+                                    placeholder="9414012345"
+                                    value={settingsMap['support_whatsapp_3'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_whatsapp_3: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white font-mono"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Admin Login ID, Email & Password Change Form */}
+                          <div className="pt-4 border-t border-stone-200 space-y-3">
+                            <div className="flex items-center gap-2">
+                              <Lock className="w-5 h-5 text-[#A87A2A]" />
+                              <div>
+                                <span className="font-serif font-bold text-stone-800 text-sm">
+                                  Admin Credentials & Password Security
+                                </span>
+                                <p className="text-[10px] text-stone-500">
+                                  Apna Admin Name, Login ID, Email aur Password yahan se direct update karein.
+                                </p>
+                              </div>
+                            </div>
+
+                            {profileUpdateMsg && (
+                              <div
+                                className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                                  profileUpdateMsg.success
+                                    ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                                    : 'bg-rose-50 text-rose-800 border border-rose-200'
+                                }`}
+                              >
+                                {profileUpdateMsg.success ? (
+                                  <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+                                ) : (
+                                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                                )}
+                                <span>{profileUpdateMsg.message}</span>
+                              </div>
+                            )}
+
+                            <div className="p-4 bg-stone-50 border border-stone-200 rounded-2xl space-y-3 text-xs">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block font-semibold text-stone-700 mb-1">
+                                    Admin Full Name
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder={currentAdmin.name || 'Admin Name'}
+                                    value={adminProfileForm.name}
+                                    onChange={(e) => setAdminProfileForm({ ...adminProfileForm, name: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block font-semibold text-stone-700 mb-1">
+                                    Admin Login ID / Username
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder={currentAdmin.adminId || 'admin'}
+                                    value={adminProfileForm.adminId}
+                                    onChange={(e) => setAdminProfileForm({ ...adminProfileForm, adminId: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono focus:outline-none focus:border-[#A87A2A]"
+                                  />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                  <label className="block font-semibold text-stone-700 mb-1">
+                                    Admin Registered Email
+                                  </label>
+                                  <input
+                                    type="email"
+                                    placeholder={currentAdmin.email || 'admin@ssvastra.com'}
+                                    value={adminProfileForm.email}
+                                    onChange={(e) => setAdminProfileForm({ ...adminProfileForm, email: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                                  />
+                                </div>
+
+                                <div>
+                                  <label className="block font-semibold text-stone-700 mb-1">
+                                    Admin Mobile Number
+                                  </label>
+                                  <input
+                                    type="tel"
+                                    placeholder={currentAdmin.phone || '9783770735'}
+                                    value={adminProfileForm.phone}
+                                    onChange={(e) => setAdminProfileForm({ ...adminProfileForm, phone: e.target.value })}
+                                    className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white font-mono focus:outline-none focus:border-[#A87A2A]"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Password Change Sub-section */}
+                              <div className="pt-2 border-t border-stone-200">
+                                <span className="font-bold text-stone-800 text-xs block mb-2">
+                                  Change Password (Password Badlein - Optional)
+                                </span>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-[11px] text-stone-600 mb-1">
+                                      New Password (Min. 8 characters)
+                                    </label>
+                                    <div className="relative">
+                                      <input
+                                        type={showAdminPass ? 'text' : 'password'}
+                                        placeholder="Enter strong new password"
+                                        value={adminProfileForm.newPassword}
+                                        onChange={(e) => setAdminProfileForm({ ...adminProfileForm, newPassword: e.target.value })}
+                                        className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                                      />
+                                      <button
+                                        type="button"
+                                        onClick={() => setShowAdminPass(!showAdminPass)}
+                                        className="absolute right-3 top-2.5 text-stone-400 hover:text-stone-700"
+                                      >
+                                        {showAdminPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div>
+                                    <label className="block text-[11px] text-stone-600 mb-1">
+                                      Confirm New Password
+                                    </label>
+                                    <input
+                                      type={showAdminPass ? 'text' : 'password'}
+                                      placeholder="Re-enter new password"
+                                      value={adminProfileForm.confirmPassword}
+                                      onChange={(e) => setAdminProfileForm({ ...adminProfileForm, confirmPassword: e.target.value })}
+                                      className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white focus:outline-none focus:border-[#A87A2A]"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="mt-3 flex items-center justify-end">
+                                  <button
+                                    type="button"
+                                    onClick={handleUpdateAdminProfile}
+                                    disabled={isUpdatingProfile}
+                                    className="px-4 py-2 rounded-xl bg-stone-900 hover:bg-black text-white font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                                  >
+                                    <Save className="w-3.5 h-3.5" />
+                                    <span>{isUpdatingProfile ? 'Updating Credentials...' : 'Save New Admin Credentials'}</span>
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
                           <button
                             type="submit"
                             className="px-6 py-2.5 rounded-xl bg-[#A87A2A] text-white font-bold text-xs hover:bg-[#8e6520] transition-colors shadow-sm"
@@ -6487,19 +7128,43 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block font-semibold mb-1">Category</label>
-                    <select
-                      value={editingProduct.category || 'Kurta Sets'}
-                      onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
-                      className="w-full px-3 py-2 rounded-xl border border-stone-300"
-                    >
-                      <option value="Kurta Sets">Kurta Sets</option>
-                      <option value="Co-ord Sets">Co-ord Sets</option>
-                      <option value="Anarkali & Dresses">Anarkali & Dresses</option>
-                      <option value="Kurta / Kurtis">Kurta / Kurtis</option>
-                      <option value="Festive Fits">Festive Fits</option>
-                      <option value="Fabrics">Fabrics</option>
-                    </select>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-semibold">Category</label>
+                      <button
+                        type="button"
+                        onClick={() => setIsCustomCategory(!isCustomCategory)}
+                        className="text-[10px] text-[#A87A2A] font-bold hover:underline cursor-pointer"
+                      >
+                        {isCustomCategory ? '← List me se chunein' : '➕ Custom Text likhein'}
+                      </button>
+                    </div>
+                    {isCustomCategory ? (
+                      <input
+                        type="text"
+                        placeholder="e.g. Bridal Lehengas, Organza Dupattas..."
+                        value={editingProduct.category || ''}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, category: e.target.value })}
+                        className="w-full px-3 py-2 rounded-xl border border-[#A87A2A] focus:outline-none focus:ring-1 focus:ring-[#A87A2A]"
+                      />
+                    ) : (
+                      <select
+                        value={editingProduct.category || 'Kurta Sets'}
+                        onChange={(e) => {
+                          if (e.target.value === '__custom__') {
+                            setIsCustomCategory(true);
+                            setEditingProduct({ ...editingProduct, category: '' });
+                          } else {
+                            setEditingProduct({ ...editingProduct, category: e.target.value });
+                          }
+                        }}
+                        className="w-full px-3 py-2 rounded-xl border border-stone-300"
+                      >
+                        {categoriesList.map((c) => (
+                          <option key={c.id} value={c.name}>{c.name}</option>
+                        ))}
+                        <option value="__custom__">➕ + Enter Custom Category (New Category likhein)</option>
+                      </select>
+                    )}
                   </div>
 
                   <div>
@@ -6873,6 +7538,123 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                     onChange={(e) => setEditingProduct({ ...editingProduct, fabric: e.target.value })}
                     className="w-full px-3 py-2 rounded-xl border border-stone-300"
                   />
+                </div>
+
+                {/* Product Multi-Colors Studio */}
+                <div className="p-3.5 bg-[#FBF7F0] border border-[#E9A9BB]/40 rounded-2xl space-y-2.5">
+                  <div>
+                    <label className="block text-xs font-bold text-[#2B2320]">
+                      Product Color Options (Multi-Color Swatches)
+                    </label>
+                    <p className="text-[10px] text-stone-500">
+                      Storefront par customer inme se apna pasandeeda rang select kar sakte hain.
+                    </p>
+                  </div>
+
+                  {/* Active Selected Colors */}
+                  <div className="flex items-center gap-1.5 flex-wrap min-h-[38px] p-2 bg-white rounded-xl border border-stone-200">
+                    {(editingProduct.colors && editingProduct.colors.length > 0
+                      ? editingProduct.colors
+                      : editingProduct.color
+                      ? [editingProduct.color]
+                      : []
+                    ).map((col, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-stone-100 text-stone-800 border border-stone-300 shadow-2xs"
+                      >
+                        <span
+                          className="w-2.5 h-2.5 rounded-full border border-stone-400"
+                          style={{
+                            backgroundColor:
+                              col.toLowerCase().includes('pink') ? '#f472b6' :
+                              col.toLowerCase().includes('red') || col.toLowerCase().includes('maroon') ? '#991b1b' :
+                              col.toLowerCase().includes('blue') ? '#1e40af' :
+                              col.toLowerCase().includes('green') ? '#15803d' :
+                              col.toLowerCase().includes('yellow') || col.toLowerCase().includes('mustard') ? '#eab308' :
+                              col.toLowerCase().includes('white') ? '#fafaf9' :
+                              col.toLowerCase().includes('black') ? '#18181b' : '#A87A2A'
+                          }}
+                        />
+                        <span>{col}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const current = editingProduct.colors || (editingProduct.color ? [editingProduct.color] : []);
+                            const filtered = current.filter((_, i) => i !== idx);
+                            setEditingProduct({ ...editingProduct, colors: filtered, color: filtered[0] || '' });
+                          }}
+                          className="text-stone-400 hover:text-rose-600 font-bold ml-0.5 cursor-pointer text-sm"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                    {(!editingProduct.colors || editingProduct.colors.length === 0) && !editingProduct.color && (
+                      <span className="text-xs text-stone-400 italic">Koi color add nahi kiya gaya hai.</span>
+                    )}
+                  </div>
+
+                  {/* Quick Color Presets */}
+                  <div className="flex items-center gap-1 flex-wrap pt-0.5">
+                    <span className="text-[10px] text-stone-500 font-semibold">Quick Add:</span>
+                    {['Rani Pink', 'Mustard Yellow', 'Pista Green', 'Royal Blue', 'Blush Peach', 'Maroon', 'Midnight Black', 'Ivory White'].map((quickCol) => (
+                      <button
+                        key={quickCol}
+                        type="button"
+                        onClick={() => {
+                          const current = editingProduct.colors || (editingProduct.color ? [editingProduct.color] : []);
+                          if (!current.includes(quickCol)) {
+                            const updated = [...current, quickCol];
+                            setEditingProduct({ ...editingProduct, colors: updated, color: updated[0] });
+                          }
+                        }}
+                        className="px-2 py-0.5 rounded-md bg-white hover:bg-stone-100 border border-stone-200 text-[10px] text-stone-700 font-medium cursor-pointer transition-colors"
+                      >
+                        + {quickCol}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Custom Color Input */}
+                  <div className="flex items-center gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="Type custom color name (e.g. Teal Green, Wine Red)..."
+                      value={newColorInput}
+                      onChange={(e) => setNewColorInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          if (newColorInput.trim()) {
+                            const current = editingProduct.colors || (editingProduct.color ? [editingProduct.color] : []);
+                            if (!current.includes(newColorInput.trim())) {
+                              const updated = [...current, newColorInput.trim()];
+                              setEditingProduct({ ...editingProduct, colors: updated, color: updated[0] });
+                            }
+                            setNewColorInput('');
+                          }
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 rounded-xl border border-stone-300 text-xs focus:outline-none focus:border-[#A87A2A]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newColorInput.trim()) {
+                          const current = editingProduct.colors || (editingProduct.color ? [editingProduct.color] : []);
+                          if (!current.includes(newColorInput.trim())) {
+                            const updated = [...current, newColorInput.trim()];
+                            setEditingProduct({ ...editingProduct, colors: updated, color: updated[0] });
+                          }
+                          setNewColorInput('');
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-[#A87A2A] text-white text-xs font-bold hover:bg-[#8e6520] cursor-pointer shrink-0"
+                    >
+                      + Add Rang
+                    </button>
+                  </div>
                 </div>
 
                 <div>
@@ -8651,6 +9433,218 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           categories={categoriesList}
           initialProduct={selectedDeepLinkProduct}
         />
+
+        {/* Video Reel Add / Edit Modal (9:16 Portrait) */}
+        {showReelModal && editingReel && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 overflow-y-auto">
+            <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden my-6 border border-stone-200">
+              <div className="px-6 py-4 bg-[#FBF7F0] border-b border-stone-200 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-[#F7E3E8] border border-[#A87A2A]/40 flex items-center justify-center text-[#A87A2A]">
+                    <Film className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif text-lg font-bold text-[#2B2320]">
+                      {editingReel.id ? 'Edit Video Reel (9:16)' : 'Add New Video Reel (9:16)'}
+                    </h3>
+                    <p className="text-[10px] text-stone-500">
+                      Mobile portrait video reel for homepage "Watch, Love & Shop" section
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowReelModal(false)}
+                  className="p-1.5 rounded-full text-stone-400 hover:text-stone-700 hover:bg-stone-100"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <form onSubmit={handleSaveReel} className="p-6 space-y-4 text-xs">
+                {/* Reel Title */}
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    Reel Title / Caption *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Royal Anarkali Handblock Drape Look"
+                    value={editingReel.title || ''}
+                    onChange={(e) => setEditingReel({ ...editingReel, title: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                  />
+                </div>
+
+                {/* Video MP4 URL */}
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    9:16 Portrait Video MP4 URL *
+                  </label>
+                  <input
+                    type="url"
+                    required
+                    placeholder="https://example.com/video.mp4 or mixkit / CDN video URL"
+                    value={editingReel.videoUrl || ''}
+                    onChange={(e) => setEditingReel({ ...editingReel, videoUrl: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                  />
+                  <p className="text-[10px] text-stone-400 mt-1">
+                    Direct MP4 video URL (9:16 aspect ratio). Mobile portrait format recommended.
+                  </p>
+                </div>
+
+                {/* Poster Image URL */}
+                <div>
+                  <label className="block font-semibold text-stone-700 mb-1">
+                    Cover / Poster Image URL (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://images.unsplash.com/... or Google Drive URL"
+                    value={editingReel.posterUrl || ''}
+                    onChange={(e) => setEditingReel({ ...editingReel, posterUrl: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                  />
+                </div>
+
+                {/* Linked Outfit Product */}
+                <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-2xl space-y-2.5">
+                  <label className="block font-bold text-stone-800 text-[11px]">
+                    Pin Outfit Product (Video ke niche buy button)
+                  </label>
+                  <div>
+                    <label className="block text-[10px] text-stone-600 mb-0.5">
+                      Select From Store Catalog
+                    </label>
+                    <select
+                      value={editingReel.productId || ''}
+                      onChange={(e) => {
+                        const pid = parseInt(e.target.value, 10);
+                        const found = productsList.find((p) => p.id === pid);
+                        if (found) {
+                          setEditingReel({
+                            ...editingReel,
+                            productId: found.id,
+                            productTitle: found.name,
+                            productPrice: found.price,
+                            productImage: found.image,
+                          });
+                        }
+                      }}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 bg-white"
+                    >
+                      <option value="">-- Choose Product From Catalog --</option>
+                      {productsList.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {p.name} (₹{p.price.toLocaleString('en-IN')})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 pt-1">
+                    <div>
+                      <label className="block text-[10px] text-stone-600 mb-0.5">Product Title</label>
+                      <input
+                        type="text"
+                        placeholder="Outfit Title"
+                        value={editingReel.productTitle || ''}
+                        onChange={(e) => setEditingReel({ ...editingReel, productTitle: e.target.value })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] text-stone-600 mb-0.5">Price (₹)</label>
+                      <input
+                        type="number"
+                        placeholder="1999"
+                        value={editingReel.productPrice || ''}
+                        onChange={(e) => setEditingReel({ ...editingReel, productPrice: parseInt(e.target.value, 10) || 0 })}
+                        className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] text-stone-600 mb-0.5">Product Thumbnail Image URL</label>
+                    <input
+                      type="url"
+                      placeholder="Outfit image URL"
+                      value={editingReel.productImage || ''}
+                      onChange={(e) => setEditingReel({ ...editingReel, productImage: e.target.value })}
+                      className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 bg-white font-mono text-[10px]"
+                    />
+                  </div>
+                </div>
+
+                {/* Badge & Order */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Badge Text</label>
+                    <input
+                      type="text"
+                      placeholder="Trending 🔥"
+                      value={editingReel.badge || ''}
+                      onChange={(e) => setEditingReel({ ...editingReel, badge: e.target.value })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                    />
+                    <div className="flex gap-1 flex-wrap mt-1">
+                      {['Trending 🔥', 'New Arrival ✨', 'Best Seller 👑', 'Must Have 💖'].map((b) => (
+                        <button
+                          key={b}
+                          type="button"
+                          onClick={() => setEditingReel({ ...editingReel, badge: b })}
+                          className="text-[9px] px-1.5 py-0.5 rounded bg-stone-100 hover:bg-stone-200 border border-stone-200"
+                        >
+                          {b}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-stone-700 mb-1">Display Order</label>
+                    <input
+                      type="number"
+                      value={editingReel.displayOrder ?? 1}
+                      onChange={(e) => setEditingReel({ ...editingReel, displayOrder: parseInt(e.target.value, 10) || 1 })}
+                      className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono focus:outline-none focus:border-[#A87A2A]"
+                    />
+                    <label className="flex items-center gap-2 mt-2 cursor-pointer font-bold text-stone-700">
+                      <input
+                        type="checkbox"
+                        checked={editingReel.isActive !== false}
+                        onChange={(e) => setEditingReel({ ...editingReel, isActive: e.target.checked })}
+                        className="rounded accent-[#A87A2A]"
+                      />
+                      <span>Show Live on Homepage</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-3 border-t border-stone-200 flex items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowReelModal(false)}
+                    className="px-4 py-2 rounded-xl border border-stone-300 text-stone-600 hover:bg-stone-50 font-bold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSavingReel}
+                    className="px-5 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                  >
+                    <Save className="w-4 h-4" />
+                    <span>{isSavingReel ? 'Saving Reel...' : 'Save Video Reel'}</span>
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
 
       </div>
     </div>

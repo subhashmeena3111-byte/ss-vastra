@@ -23,8 +23,8 @@ import { normalizeProductSizes, normalizeProductHighlights } from '../utils/prod
 interface ProductDetailModalProps {
   product: Product | null;
   onClose: () => void;
-  onAddToCart: (product: Product, size: string, quantity: number) => void;
-  onInstantBuy: (product: Product, size: string, quantity: number) => void;
+  onAddToCart: (product: Product, size: string, quantity: number, color?: string) => void;
+  onInstantBuy: (product: Product, size: string, quantity: number, color?: string) => void;
   onOpenDeepLink?: (product: Product) => void;
   isWishlisted?: boolean;
   onToggleWishlist?: (product: Product) => void;
@@ -63,6 +63,25 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
   );
   const [quantity, setQuantity] = useState(1);
 
+  // Multi-color options
+  const availableColors = useMemo(() => {
+    if (product.colors && Array.isArray(product.colors) && product.colors.length > 0) {
+      return product.colors;
+    }
+    if (product.color) {
+      return [product.color];
+    }
+    return [];
+  }, [product]);
+
+  const [selectedColor, setSelectedColor] = useState<string>(() => availableColors[0] || '');
+
+  useEffect(() => {
+    if (availableColors.length > 0 && !availableColors.includes(selectedColor)) {
+      setSelectedColor(availableColors[0]);
+    }
+  }, [availableColors]);
+
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const [addedToast, setAddedToast] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
@@ -75,14 +94,15 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
       : 0);
 
   const handleAdd = () => {
-    onAddToCart(product, selectedSize, quantity);
+    onAddToCart(product, selectedSize, quantity, selectedColor || undefined);
     setAddedToast(true);
     setTimeout(() => setAddedToast(false), 2000);
   };
 
   const handleWhatsApp = () => {
     const deepLink = `${window.location.origin}/?product=${product.id}`;
-    const msg = `Namaste SS VASTRA! Main yeh dress order karna chahti hu:\n*${product.name}*\nSize: ${selectedSize}\nQuantity: ${quantity}\nPrice: ₹${product.price * quantity}\nProduct Deep Link: ${deepLink}\nAddress: Green Vihar Vatika, Sanganer, Jaipur`;
+    const colorLine = selectedColor ? `\nColor: ${selectedColor}` : '';
+    const msg = `Namaste SS VASTRA! Main yeh dress order karna chahti hu:\n*${product.name}*\nSize: ${selectedSize}${colorLine}\nQuantity: ${quantity}\nPrice: ₹${product.price * quantity}\nProduct Deep Link: ${deepLink}\nAddress: Green Vihar Vatika, Sanganer, Jaipur`;
     const url = `https://wa.me/919783770735?text=${encodeURIComponent(msg)}`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
@@ -288,6 +308,50 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
               </div>
             )}
 
+            {/* Color Swatch Selector */}
+            {availableColors.length > 0 && (
+              <div className="mb-4">
+                <span className="block text-xs font-bold text-[#2B2320] uppercase tracking-wider mb-2">
+                  Select Color: <span className="text-[#A87A2A] font-semibold">{selectedColor}</span>
+                </span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {availableColors.map((col) => {
+                    const isSelected = selectedColor === col;
+                    return (
+                      <button
+                        key={col}
+                        type="button"
+                        onClick={() => setSelectedColor(col)}
+                        className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                          isSelected
+                            ? 'border-[#A87A2A] bg-[#F7E3E8] text-[#2B2320] ring-2 ring-[#A87A2A]/40 shadow-xs'
+                            : 'border-stone-300 text-stone-700 hover:border-stone-400 bg-white'
+                        }`}
+                      >
+                        <span
+                          className="w-3.5 h-3.5 rounded-full border border-stone-300 shadow-2xs shrink-0"
+                          style={{
+                            backgroundColor:
+                              col.toLowerCase().includes('pink') || col.toLowerCase().includes('gulabi') ? '#f472b6' :
+                              col.toLowerCase().includes('red') || col.toLowerCase().includes('maroon') ? '#991b1b' :
+                              col.toLowerCase().includes('blue') || col.toLowerCase().includes('navy') ? '#1e40af' :
+                              col.toLowerCase().includes('green') || col.toLowerCase().includes('pista') ? '#15803d' :
+                              col.toLowerCase().includes('yellow') || col.toLowerCase().includes('mustard') ? '#eab308' :
+                              col.toLowerCase().includes('white') || col.toLowerCase().includes('ivory') ? '#fafaf9' :
+                              col.toLowerCase().includes('black') ? '#18181b' :
+                              col.toLowerCase().includes('orange') || col.toLowerCase().includes('rust') ? '#ea580c' :
+                              col.toLowerCase().includes('purple') ? '#7e22ce' :
+                              col.toLowerCase().includes('beige') ? '#f5f5dc' : '#A87A2A'
+                          }}
+                        />
+                        <span>{col}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             {/* Quantity Selector */}
             <div className="flex items-center gap-4 mb-6">
               <span className="text-xs font-bold text-[#2B2320] uppercase tracking-wider">
@@ -326,7 +390,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
 
                 <button
                   type="button"
-                  onClick={() => onInstantBuy(product, selectedSize, quantity)}
+                  onClick={() => onInstantBuy(product, selectedSize, quantity, selectedColor || undefined)}
                   className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold text-sm transition-all shadow-md active:scale-98"
                 >
                   <Sparkles className="w-4 h-4" />
