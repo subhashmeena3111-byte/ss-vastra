@@ -48,10 +48,16 @@ import {
   Smartphone,
   Database,
   Edit,
+  Edit3,
   Activity,
   Globe,
   LogIn,
   UserPlus,
+  Printer,
+  SlidersHorizontal,
+  Save,
+  FileEdit,
+  Undo2,
 } from 'lucide-react';
 import {
   AdminUser,
@@ -3932,6 +3938,53 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         </div>
                       </div>
 
+                      {/* INVOICE CORRECTION & ORDER PICKER BAR */}
+                      <div className="bg-amber-50/80 border border-amber-200/90 rounded-2xl p-4 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+                        <div className="flex items-center gap-2.5">
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
+                            <FileEdit className="w-5 h-5 text-amber-700" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-xs text-amber-950 block">Customer Order Invoice Correction (बिल संशोधन)</span>
+                            <span className="text-[11px] text-amber-800">Kisi bhi customer order ka bill/invoice select karke usme live correction karein aur save karein</span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            onChange={(e) => {
+                              const ordId = Number(e.target.value);
+                              const found = ordersList.find((o) => o.id === ordId);
+                              if (found) setPrintingOrder(found);
+                            }}
+                            defaultValue=""
+                            className="px-3 py-2 rounded-xl bg-white border border-amber-300 text-xs font-semibold text-stone-800 focus:outline-none focus:border-[#A87A2A]"
+                          >
+                            <option value="" disabled>-- Order Chunein (Select Order to Correct) --</option>
+                            {ordersList.map((ord) => (
+                              <option key={ord.id} value={ord.id}>
+                                #{ord.orderNumber || ord.id} - {ord.customerName} (₹{ord.totalAmount})
+                              </option>
+                            ))}
+                          </select>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (ordersList.length > 0) {
+                                setPrintingOrder(ordersList[0]);
+                              } else {
+                                alert('Koi order uplabdh nahi hai. Aap Orders tab se Naya Order bana sakte hain.');
+                              }
+                            }}
+                            className="px-4 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold transition-colors cursor-pointer shrink-0 shadow-xs flex items-center gap-1.5"
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                            <span>Correct Invoice</span>
+                          </button>
+                        </div>
+                      </div>
+
                       {/* 2-Column Grid: Left Config, Right Live Preview */}
                       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                         
@@ -3941,9 +3994,30 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             <span className="font-serif font-bold text-sm text-[#2B2320]">
                               Invoice Metadata & Legal Settings
                             </span>
-                            <span className="text-[11px] text-[#A87A2A] font-semibold">
-                              Live Auto-Preview →
-                            </span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSettingsMap((prev) => ({
+                                    ...prev,
+                                    invoice_store_name: 'SS VASTRA',
+                                    invoice_tagline: 'Elegance in Every Thread • Jaipur Handcraft',
+                                    invoice_gstin: '08AALCS9821M1Z4',
+                                    invoice_msme: 'UDYAM-RJ-17-0098234',
+                                    invoice_address: 'Green Vihar Vatika, Sanganer, Jaipur, Rajasthan 303905',
+                                    invoice_phone: '+91 9783770735',
+                                    invoice_email: 'subhashmeena3111@gmail.com',
+                                    invoice_signatory: 'Subhash Meena (Founder & Proprietor)',
+                                  }));
+                                  setActionMessage('Standard Jaipur GST & MSME template auto-filled!');
+                                  setTimeout(() => setActionMessage(null), 3000);
+                                }}
+                                className="px-2 py-0.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-600 font-semibold text-[10px] transition-colors cursor-pointer"
+                                title="Auto-populate standard Jaipur GST & MSME values"
+                              >
+                                Auto-Fill GST Template
+                              </button>
+                            </div>
                           </div>
 
                           {/* Brand Name & Tagline */}
@@ -8561,6 +8635,12 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           order={printingOrder}
           onClose={() => setPrintingOrder(null)}
           settings={settingsMap}
+          onOrderUpdated={(updated) => {
+            setOrdersList((prev) => prev.map((o) => (o.id === updated.id ? updated : o)));
+            setPrintingOrder(updated);
+            setActionMessage('Invoice corrections successfully saved to order!');
+            setTimeout(() => setActionMessage(null), 3500);
+          }}
         />
 
         {/* Deep Link & QR Generator Modal */}
