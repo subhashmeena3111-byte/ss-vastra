@@ -62,6 +62,8 @@ import {
   Video,
   Palette,
   MessageSquare,
+  Sparkles,
+  MessageCircle,
 } from 'lucide-react';
 import {
   AdminUser,
