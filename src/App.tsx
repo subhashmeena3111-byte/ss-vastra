@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { Package, Plus } from 'lucide-react';
 import { Navbar } from './components/Navbar.tsx';
 import { HeroSlider } from './components/HeroSlider.tsx';
 import { CategoryRow } from './components/CategoryRow.tsx';
@@ -48,7 +49,7 @@ const INITIAL_CATEGORIES: Category[] = [
     slug: 'anarkali-dresses',
     name: 'Anarkali & Dresses',
     icon: '💃',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80',
   },
   {
     id: 4,

@@ -6,7 +6,7 @@ export const FloatingWhatsApp: React.FC = () => {
     'https://wa.me/919783770735?text=Namaste%20SS%20VASTRA!%20Mujhe%20styling%20advice%20aur%20outfit%20recommendations%20chahiye';
 
   return (
-    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2 pointer-events-auto">
+    <div className="fixed bottom-5 right-5 z-40 flex flex-col items-end gap-2 pointer-events-auto transition-transform duration-300 ease-out hover:scale-105 active:scale-95">
       {/* Secondary 'Ask an Expert' Link / Trigger with gentle floating animation */}
       <a
         href={whatsappUrl}

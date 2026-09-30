@@ -164,6 +164,15 @@ export const CheckoutModal: React.FC<CheckoutModalProps> = ({
         localStorage.setItem('ss_vastra_customer_phone', formData.customerPhone);
         if (formData.customerEmail) localStorage.setItem('ss_vastra_customer_email', formData.customerEmail);
         localStorage.setItem('ss_vastra_customer_address', `${formData.shippingAddress}, ${formData.city}, ${formData.state} ${formData.pincode}`);
+
+        const placedOrderData = {
+          ...order,
+          items: order.items || payload.items,
+          shipment: shipment || order.shipment,
+        };
+        const currentOrders = JSON.parse(localStorage.getItem('ss_vastra_customer_orders') || '[]');
+        const updated = [placedOrderData, ...currentOrders.filter((o: any) => o.orderNumber !== order.orderNumber)];
+        localStorage.setItem('ss_vastra_customer_orders', JSON.stringify(updated.slice(0, 50)));
       } catch {
         // ignore
       }

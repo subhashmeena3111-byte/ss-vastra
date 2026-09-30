@@ -17,6 +17,8 @@ export interface Product {
   isNewArrival?: boolean;
   isBestSeller?: boolean;
   isFeatured?: boolean;
+  isSpotlight?: boolean;
+  isOutfit?: boolean;
   isActive?: boolean;
   isDemo?: boolean;
 }

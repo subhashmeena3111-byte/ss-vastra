@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Printer, Package, Truck, ShieldCheck, MapPin, Phone, Mail } from 'lucide-react';
 import { Order } from '../types.ts';
 
 interface AdminInvoiceModalProps {
   order: Order | null;
   onClose: () => void;
+  settings?: Record<string, string>;
 }
 
-export const AdminInvoiceModal: React.FC<AdminInvoiceModalProps> = ({ order, onClose }) => {
+export const AdminInvoiceModal: React.FC<AdminInvoiceModalProps> = ({ order, onClose, settings }) => {
+  const [storeSettings, setStoreSettings] = useState<Record<string, string>>(settings || {});
+
+  useEffect(() => {
+    if (!settings || Object.keys(settings).length === 0) {
+      fetch('/api/settings')
+        .then((r) => r.json())
+        .then((d) => {
+          if (d.success && d.settings) setStoreSettings(d.settings);
+        })
+        .catch(() => {});
+    } else {
+      setStoreSettings(settings);
+    }
+  }, [settings]);
+
   if (!order) return null;
 
   const handlePrint = () => {
@@ -33,6 +49,15 @@ export const AdminInvoiceModal: React.FC<AdminInvoiceModalProps> = ({ order, onC
   const discount = order.discountAmount || 0;
   const gstEstimated = Math.round((order.totalAmount * 5) / 105); // 5% GST inclusive for garments
   const taxableAmount = order.totalAmount - gstEstimated;
+
+  const storeName = storeSettings.invoice_store_name || storeSettings.store_name || 'SS VASTRA';
+  const tagline = storeSettings.invoice_tagline || storeSettings.tagline || 'Elegance in Every Thread • Jaipur Handcraft';
+  const address = storeSettings.invoice_address || storeSettings.address || 'Green Vihar Vatika, Sanganer, Jaipur, Rajasthan 303905';
+  const phone = storeSettings.invoice_phone || storeSettings.phone || '+91 9783770735';
+  const email = storeSettings.invoice_email || storeSettings.email || 'subhashmeena3111@gmail.com';
+  const gstin = storeSettings.invoice_gstin || '08AALCS9821M1Z4';
+  const msme = storeSettings.invoice_msme || 'UDYAM-RJ-17-0098234';
+  const logoUrl = storeSettings.invoice_logo_url;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-in fade-in duration-200 print:p-0 print:bg-white print:static">
@@ -68,20 +93,33 @@ export const AdminInvoiceModal: React.FC<AdminInvoiceModalProps> = ({ order, onC
           <div className="flex justify-between items-start border-b border-stone-200 pb-6">
             <div>
               <div className="flex items-center gap-2.5 mb-1.5">
-                <div className="w-8 h-8 rounded-full bg-[#F7E3E8] border border-[#A87A2A] flex items-center justify-center font-serif font-bold text-[#A87A2A] text-sm">
-                  SS
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt={storeName}
+                    className="h-10 max-w-[140px] object-contain rounded-lg"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded-full bg-[#F7E3E8] border border-[#A87A2A] flex items-center justify-center font-serif font-bold text-[#A87A2A] text-sm shadow-xs">
+                    SS
+                  </div>
+                )}
+                <div>
+                  <h1 className="font-serif text-2xl font-bold tracking-wider text-[#2B2320]">
+                    {storeName}
+                  </h1>
                 </div>
-                <h1 className="font-serif text-2xl font-bold tracking-wider text-[#2B2320]">
-                  SS VASTRA
-                </h1>
               </div>
               <p className="text-[11px] text-[#A87A2A] font-semibold uppercase tracking-wider">
-                Elegance in Every Thread • Jaipur Handcraft
+                {tagline}
               </p>
               <div className="mt-2 text-stone-600 space-y-0.5 text-[11px]">
-                <p>Green Vihar Vatika, Sanganer, Jaipur, Rajasthan 303905</p>
-                <p>Phone: +91 9783770735 | Email: subhashmeena3111@gmail.com</p>
-                <p>GSTIN: 08AALCS9821M1Z4 (Jaipur, RJ)</p>
+                <p>{address}</p>
+                <p>Phone: {phone} | Email: {email}</p>
+                <p className="font-semibold text-stone-700">
+                  <span>GSTIN: {gstin} (Jaipur, RJ)</span>
+                  {msme && <span className="ml-3">MSME / Udyam: {msme}</span>}
+                </p>
               </div>
             </div>
 

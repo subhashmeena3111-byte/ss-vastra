@@ -2,7 +2,7 @@ import type { Product } from '../types.ts';
 import { normalizeProductImageUrl } from './imageUtils.ts';
 
 export const FALLBACK_PRODUCT_IMAGE =
-  'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
+  'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
 
 export function normalizeProductSizes(sizes: any): string[] {
   if (Array.isArray(sizes)) {
@@ -139,6 +139,8 @@ export function sanitizeProduct(p: any): Product {
     isNewArrival: Boolean(p.isNewArrival),
     isBestSeller: Boolean(p.isBestSeller),
     isFeatured: Boolean(p.isFeatured),
+    isSpotlight: p.isSpotlight !== undefined ? Boolean(p.isSpotlight) : Boolean(p.isFeatured),
+    isOutfit: Boolean(p.isOutfit),
     isActive: p.isActive !== false,
     isDemo: p.isDemo !== undefined ? Boolean(p.isDemo) : (typeof p.id === 'number' && p.id <= 8),
   };

@@ -72,6 +72,8 @@ export const products = pgTable('products', {
   isNewArrival: boolean('is_new_arrival').default(false),
   isBestSeller: boolean('is_best_seller').default(false),
   isFeatured: boolean('is_featured').default(false),
+  isSpotlight: boolean('is_spotlight').default(false),
+  isOutfit: boolean('is_outfit').default(false),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
 });

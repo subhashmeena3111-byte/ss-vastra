@@ -183,6 +183,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [uploadingProductId, setUploadingProductId] = useState<number | null>(null);
   const [selectedUploadProductId, setSelectedUploadProductId] = useState<number | null>(null);
   const directProductFileInputRef = useRef<HTMLInputElement>(null);
+  const invoiceLogoFileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingInvoiceLogo, setIsUploadingInvoiceLogo] = useState(false);
 
   // Order Detail / Shipment Modal State
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
@@ -1457,6 +1459,63 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   };
 
+  const handleInvoiceLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingInvoiceLogo(true);
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 450;
+          const MAX_HEIGHT = 160;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) {
+            height = Math.round((height * MAX_WIDTH) / width);
+            width = MAX_WIDTH;
+          }
+          if (height > MAX_HEIGHT) {
+            width = Math.round((width * MAX_HEIGHT) / height);
+            height = MAX_HEIGHT;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+          }
+          const base64 = canvas.toDataURL('image/png');
+
+          try {
+            const upRes = await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: base64, fileName: 'invoice_logo' }),
+            });
+            const upData = await upRes.json();
+            const finalLogo = upData.url || base64;
+            setSettingsMap((prev) => ({ ...prev, invoice_logo_url: finalLogo }));
+            setActionMessage('Receipt logo uploaded and updated!');
+            setTimeout(() => setActionMessage(null), 3000);
+          } catch {
+            setSettingsMap((prev) => ({ ...prev, invoice_logo_url: base64 }));
+          } finally {
+            setIsUploadingInvoiceLogo(false);
+            if (invoiceLogoFileInputRef.current) invoiceLogoFileInputRef.current.value = '';
+          }
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsUploadingInvoiceLogo(false);
+    }
+  };
+
   // Product Actions
   const handleSaveProduct = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2702,6 +2761,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <span className="font-bold">Demo Data Manager</span>
               </button>
 
+              <button
+                onClick={() => setActiveTab('receipts')}
+                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
+                  activeTab === 'receipts'
+                    ? 'bg-[#A87A2A] text-white shadow-xs'
+                    : 'hover:bg-stone-800 hover:text-white'
+                }`}
+              >
+                <Receipt className="w-4 h-4" />
+                <span>Invoices & Receipts</span>
+              </button>
+
               {/* Super Admin Restricted Tabs */}
               {currentAdmin.role === 'super_admin' ? (
                 <>
@@ -3298,6 +3369,418 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                         if (onProductsUpdated) onProductsUpdated();
                       }}
                     />
+                  )}
+
+                  {/* TAB: INVOICES & RECEIPTS (SUPER ADMIN & STAFF) */}
+                  {activeTab === 'receipts' && (
+                    <div className="space-y-6 animate-in fade-in">
+                      {/* Hidden Logo File Input */}
+                      <input
+                        type="file"
+                        ref={invoiceLogoFileInputRef}
+                        onChange={handleInvoiceLogoUpload}
+                        accept="image/*"
+                        className="hidden"
+                      />
+
+                      {/* Header */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-2xl border border-stone-200 shadow-xs">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h2 className="font-serif text-2xl font-bold text-[#2B2320]">
+                              Invoices, Bills & Receipts Manager
+                            </h2>
+                            <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F7E3E8] text-[#A87A2A] border border-[#E9A9BB]/60">
+                              GST & MSME Ready
+                            </span>
+                          </div>
+                          <p className="text-xs text-stone-500 mt-1">
+                            Live customization of GSTIN, MSME / Udyam registration, brand logo, store contact, and printable receipt layout.
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => window.print()}
+                            className="px-4 py-2 rounded-xl bg-stone-100 hover:bg-stone-200 text-stone-700 text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-stone-300"
+                          >
+                            <Printer className="w-4 h-4 text-[#A87A2A]" />
+                            <span>Print Sample Sheet</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2-Column Grid: Left Config, Right Live Preview */}
+                      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        
+                        {/* LEFT: Configuration Form (5 cols) */}
+                        <form onSubmit={handleSaveSettings} className="lg:col-span-5 bg-white p-5 sm:p-6 rounded-2xl border border-stone-200 shadow-xs space-y-4 text-xs">
+                          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                            <span className="font-serif font-bold text-sm text-[#2B2320]">
+                              Invoice Metadata & Legal Settings
+                            </span>
+                            <span className="text-[11px] text-[#A87A2A] font-semibold">
+                              Live Auto-Preview →
+                            </span>
+                          </div>
+
+                          {/* Brand Name & Tagline */}
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block font-semibold text-stone-700 mb-1">
+                                Store / Business Legal Name
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsMap['invoice_store_name'] || settingsMap['store_name'] || 'SS VASTRA'}
+                                onChange={(e) => setSettingsMap({ ...settingsMap, invoice_store_name: e.target.value })}
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A] font-semibold text-stone-800"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-stone-700 mb-1">
+                                Subtitle / Brand Tagline
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsMap['invoice_tagline'] || settingsMap['tagline'] || 'Elegance in Every Thread • Jaipur Handcraft'}
+                                onChange={(e) => setSettingsMap({ ...settingsMap, invoice_tagline: e.target.value })}
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                              />
+                            </div>
+                          </div>
+
+                          {/* GSTIN & MSME Numbers */}
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                            <div>
+                              <label className="block font-semibold text-stone-700 mb-1">
+                                GSTIN Number (Jaipur, RJ)
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsMap['invoice_gstin'] || '08AALCS9821M1Z4'}
+                                onChange={(e) => setSettingsMap({ ...settingsMap, invoice_gstin: e.target.value.toUpperCase() })}
+                                placeholder="08AALCS9821M1Z4"
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A] font-mono font-bold text-xs"
+                              />
+                            </div>
+
+                            <div>
+                              <label className="block font-semibold text-stone-700 mb-1">
+                                MSME / Udyam Number
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsMap['invoice_msme'] || 'UDYAM-RJ-17-0098234'}
+                                onChange={(e) => setSettingsMap({ ...settingsMap, invoice_msme: e.target.value.toUpperCase() })}
+                                placeholder="UDYAM-RJ-17-0098234"
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A] font-mono font-bold text-xs"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Logo Upload & URL */}
+                          <div className="p-3.5 bg-[#FBF7F0] rounded-xl border border-[#E9A9BB]/40 space-y-2.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-semibold text-stone-700">Official Receipt Logo</span>
+                              <button
+                                type="button"
+                                disabled={isUploadingInvoiceLogo}
+                                onClick={() => invoiceLogoFileInputRef.current?.click()}
+                                className="px-2.5 py-1 rounded-lg bg-[#A87A2A] hover:bg-[#8e6520] text-white text-[11px] font-bold flex items-center gap-1 transition-colors cursor-pointer disabled:opacity-50"
+                              >
+                                {isUploadingInvoiceLogo ? (
+                                  <>
+                                    <Loader2 className="w-3 h-3 animate-spin" />
+                                    <span>Uploading...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Upload className="w-3 h-3" />
+                                    <span>Upload Logo</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                            <input
+                              type="text"
+                              value={settingsMap['invoice_logo_url'] || ''}
+                              onChange={(e) => setSettingsMap({ ...settingsMap, invoice_logo_url: e.target.value })}
+                              placeholder="Or enter image URL (https://...)"
+                              className="w-full px-2.5 py-1.5 bg-white border border-stone-300 rounded-lg text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                            />
+                            {settingsMap['invoice_logo_url'] && (
+                              <div className="flex items-center gap-2 pt-1">
+                                <span className="text-[10px] text-stone-500">Logo Preview:</span>
+                                <img
+                                  src={settingsMap['invoice_logo_url']}
+                                  alt="Logo Preview"
+                                  className="h-8 max-w-[120px] object-contain rounded bg-white p-1 border border-stone-200"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Address & Contact */}
+                          <div>
+                            <label className="block font-semibold text-stone-700 mb-1">
+                              Registered Store Address
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={settingsMap['invoice_address'] || settingsMap['address'] || 'Green Vihar Vatika, Sanganer, Jaipur, Rajasthan 303905'}
+                              onChange={(e) => setSettingsMap({ ...settingsMap, invoice_address: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                              <label className="block font-semibold text-stone-700 mb-1">
+                                Billing Phone
+                              </label>
+                              <input
+                                type="text"
+                                value={settingsMap['invoice_phone'] || settingsMap['phone'] || '+91 9783770735'}
+                                onChange={(e) => setSettingsMap({ ...settingsMap, invoice_phone: e.target.value })}
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                              />
+                            </div>
+                            <div>
+                              <label className="block font-semibold text-stone-700 mb-1">
+                                Billing Email
+                              </label>
+                              <input
+                                type="email"
+                                value={settingsMap['invoice_email'] || settingsMap['email'] || 'subhashmeena3111@gmail.com'}
+                                onChange={(e) => setSettingsMap({ ...settingsMap, invoice_email: e.target.value })}
+                                className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Signatory & Terms */}
+                          <div>
+                            <label className="block font-semibold text-stone-700 mb-1">
+                              Authorized Signatory Name & Title
+                            </label>
+                            <input
+                              type="text"
+                              value={settingsMap['invoice_signatory'] || 'Subhash Meena (Founder & Proprietor)'}
+                              onChange={(e) => setSettingsMap({ ...settingsMap, invoice_signatory: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block font-semibold text-stone-700 mb-1">
+                              Invoice Terms & Return Policy (Printed at Bottom)
+                            </label>
+                            <textarea
+                              rows={2}
+                              value={settingsMap['invoice_terms'] || '1. All handmade garments have slight natural printing variations.\n2. 7-Day easy exchange from delivery date with intact tags.'}
+                              onChange={(e) => setSettingsMap({ ...settingsMap, invoice_terms: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-stone-300 focus:outline-none focus:border-[#A87A2A]"
+                            />
+                          </div>
+
+                          {/* Submit button */}
+                          <button
+                            type="submit"
+                            className="w-full py-3 bg-[#A87A2A] hover:bg-[#8e6520] text-white rounded-xl font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer mt-2"
+                          >
+                            <CheckCircle className="w-4 h-4" />
+                            <span>Save Invoice & Receipt Settings</span>
+                          </button>
+                        </form>
+
+                        {/* RIGHT: Live Dynamic Tax Invoice Preview (7 cols) */}
+                        <div className="lg:col-span-7 space-y-3">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-bold text-stone-600 uppercase tracking-wider">
+                              📄 Real-Time Dynamic Tax Invoice Preview
+                            </span>
+                            <span className="text-[11px] text-emerald-700 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                              Live Synced
+                            </span>
+                          </div>
+
+                          {/* Printable Invoice Paper Simulation */}
+                          <div className="bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 shadow-md space-y-6 text-[#2B2320] text-xs">
+                            
+                            {/* Invoice Header */}
+                            <div className="flex flex-wrap items-start justify-between gap-4 border-b border-stone-200 pb-5">
+                              <div>
+                                <div className="flex items-center gap-2.5 mb-1.5">
+                                  {settingsMap['invoice_logo_url'] ? (
+                                    <img
+                                      src={settingsMap['invoice_logo_url']}
+                                      alt="Logo"
+                                      className="h-10 max-w-[140px] object-contain rounded-lg"
+                                    />
+                                  ) : (
+                                    <div className="w-10 h-10 rounded-full bg-[#F7E3E8] border border-[#A87A2A] flex items-center justify-center font-serif font-bold text-[#A87A2A] text-sm shadow-xs">
+                                      SS
+                                    </div>
+                                  )}
+                                  <div>
+                                    <h1 className="font-serif text-2xl font-bold tracking-wider text-[#2B2320]">
+                                      {settingsMap['invoice_store_name'] || settingsMap['store_name'] || 'SS VASTRA'}
+                                    </h1>
+                                  </div>
+                                </div>
+                                <p className="text-[11px] text-[#A87A2A] font-semibold uppercase tracking-wider">
+                                  {settingsMap['invoice_tagline'] || settingsMap['tagline'] || 'Elegance in Every Thread • Jaipur Handcraft'}
+                                </p>
+                                <div className="mt-2 text-stone-600 space-y-0.5 text-[11px]">
+                                  <p>{settingsMap['invoice_address'] || settingsMap['address'] || 'Green Vihar Vatika, Sanganer, Jaipur, Rajasthan 303905'}</p>
+                                  <p>Phone: {settingsMap['invoice_phone'] || settingsMap['phone'] || '+91 9783770735'} | Email: {settingsMap['invoice_email'] || settingsMap['email'] || 'subhashmeena3111@gmail.com'}</p>
+                                  <p className="font-semibold text-stone-700">
+                                    <span>GSTIN: {settingsMap['invoice_gstin'] || '08AALCS9821M1Z4'} (Jaipur, RJ)</span>
+                                    {(settingsMap['invoice_msme'] || 'UDYAM-RJ-17-0098234') && (
+                                      <span className="ml-3">MSME: {settingsMap['invoice_msme'] || 'UDYAM-RJ-17-0098234'}</span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="text-right">
+                                <span className="inline-block px-3 py-1 bg-[#F7E3E8] text-[#A87A2A] font-bold rounded-lg text-xs tracking-wider uppercase mb-2">
+                                  Tax Invoice
+                                </span>
+                                <table className="text-right text-xs mt-1 ml-auto">
+                                  <tbody>
+                                    <tr>
+                                      <td className="text-stone-500 pr-2 font-medium">Invoice No:</td>
+                                      <td className="font-mono font-bold">SSV-INV-2026-9829</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="text-stone-500 pr-2 font-medium">Date:</td>
+                                      <td className="font-semibold">
+                                        {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                                      </td>
+                                    </tr>
+                                    <tr>
+                                      <td className="text-stone-500 pr-2 font-medium">Payment Mode:</td>
+                                      <td className="font-bold text-[#A87A2A] uppercase">Prepaid (Razorpay)</td>
+                                    </tr>
+                                    <tr>
+                                      <td className="text-stone-500 pr-2 font-medium">Status:</td>
+                                      <td className="font-semibold text-emerald-700">Paid & Verified</td>
+                                    </tr>
+                                  </tbody>
+                                </table>
+                              </div>
+                            </div>
+
+                            {/* Customer Billed & Shipped To */}
+                            <div className="grid grid-cols-2 gap-4 bg-[#FBF7F0] p-4 rounded-2xl border border-[#E9A9BB]/40">
+                              <div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block mb-1">
+                                  Billed & Shipped To:
+                                </span>
+                                <p className="font-serif font-bold text-stone-900 text-sm">Priya Sharma</p>
+                                <p className="text-stone-600 mt-0.5">Plot 45, Model Town, Malviya Nagar</p>
+                                <p className="text-stone-600">Jaipur, Rajasthan - 302017</p>
+                                <p className="text-stone-600">Phone: +91 9829123456</p>
+                              </div>
+                              <div className="text-right">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-500 block mb-1">
+                                  Fulfillment & Courier:
+                                </span>
+                                <p className="font-semibold text-stone-800">Delhivery Express Priority</p>
+                                <p className="text-stone-600">AWB Tracking: <code className="font-mono text-[#A87A2A]">SSVTRK9829773</code></p>
+                                <p className="text-stone-600">Est. Delivery: 2-4 Business Days</p>
+                              </div>
+                            </div>
+
+                            {/* Line Items Table */}
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-left border-collapse">
+                                <thead>
+                                  <tr className="border-b-2 border-stone-200 text-stone-500 text-[11px] uppercase tracking-wider">
+                                    <th className="py-2">Item Description</th>
+                                    <th className="py-2 text-center">HSN/SAC</th>
+                                    <th className="py-2 text-center">Size</th>
+                                    <th className="py-2 text-center">Qty</th>
+                                    <th className="py-2 text-right">Unit Price</th>
+                                    <th className="py-2 text-right">Amount (₹)</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-stone-100">
+                                  <tr>
+                                    <td className="py-2.5 font-medium text-stone-900">
+                                      Jaipuri Handblock Pure Cambric Anarkali Set
+                                    </td>
+                                    <td className="py-2.5 text-center font-mono text-stone-600">5208</td>
+                                    <td className="py-2.5 text-center font-semibold">M</td>
+                                    <td className="py-2.5 text-center">1</td>
+                                    <td className="py-2.5 text-right font-mono">₹2,499</td>
+                                    <td className="py-2.5 text-right font-mono font-bold">₹2,499</td>
+                                  </tr>
+                                  <tr>
+                                    <td className="py-2.5 font-medium text-stone-900">
+                                      Pure Organza Gotapatti Border Dupatta
+                                    </td>
+                                    <td className="py-2.5 text-center font-mono text-stone-600">5208</td>
+                                    <td className="py-2.5 text-center font-semibold">Free</td>
+                                    <td className="py-2.5 text-center">1</td>
+                                    <td className="py-2.5 text-right font-mono">₹799</td>
+                                    <td className="py-2.5 text-right font-mono font-bold">₹799</td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+
+                            {/* Subtotals & Taxes */}
+                            <div className="border-t border-stone-200 pt-4 flex justify-between">
+                              <div className="w-1/2 pr-4 space-y-1">
+                                <span className="font-semibold text-stone-700 block text-[11px]">GST Breakdown:</span>
+                                <div className="text-[10px] text-stone-500 space-y-0.5">
+                                  <p>CGST (2.5%): ₹79 | SGST (2.5%): ₹79</p>
+                                  <p>Total GST Inclusive: ₹158 (5% Apparel GST)</p>
+                                </div>
+                              </div>
+                              <div className="w-1/2 pl-4 text-right space-y-1 text-xs">
+                                <div className="flex justify-between text-stone-600">
+                                  <span>Subtotal:</span>
+                                  <span className="font-mono">₹3,298</span>
+                                </div>
+                                <div className="flex justify-between text-stone-600">
+                                  <span>Shipping:</span>
+                                  <span className="text-emerald-700 font-bold">FREE (Above ₹1,999)</span>
+                                </div>
+                                <div className="flex justify-between text-stone-900 font-bold text-sm pt-2 border-t border-stone-200">
+                                  <span>Total Invoice Value:</span>
+                                  <span className="text-[#A87A2A] font-mono font-extrabold text-base">₹3,298</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Footer & Signatory */}
+                            <div className="border-t border-stone-200 pt-4 flex flex-wrap items-end justify-between gap-4">
+                              <div className="max-w-xs text-[10px] text-stone-500 leading-relaxed">
+                                <span className="font-semibold text-stone-700 block mb-0.5">Terms & Return Policy:</span>
+                                <p className="whitespace-pre-line">
+                                  {settingsMap['invoice_terms'] || '1. All handmade garments have slight natural printing variations.\n2. 7-Day easy exchange from delivery date with intact tags.'}
+                                </p>
+                              </div>
+                              <div className="text-center">
+                                <div className="w-36 h-12 border border-dashed border-[#A87A2A]/40 rounded-lg flex items-center justify-center mb-1 bg-[#FBF7F0]/60">
+                                  <span className="font-serif italic text-xs text-[#A87A2A] font-bold">SS Vastra Verified</span>
+                                </div>
+                                <span className="text-[10px] font-bold text-stone-700 block">
+                                  {settingsMap['invoice_signatory'] || 'Subhash Meena (Founder & Proprietor)'}
+                                </span>
+                                <span className="text-[9px] text-stone-400 block">Authorized Signatory</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                      </div>
+                    </div>
                   )}
 
                   {/* TAB 4: STAFF ACCOUNTS (SUPER ADMIN ONLY) */}
@@ -5280,6 +5763,62 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   />
                 </div>
 
+                {/* 4 Feature Badges & Flags */}
+                <div className="p-3 bg-[#FBF7F0] border border-[#E9A9BB]/40 rounded-2xl space-y-2">
+                  <label className="block font-bold text-xs text-[#2B2320]">
+                    Catalog Placement & Special Badges
+                  </label>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      editingProduct.isSpotlight || editingProduct.isFeatured ? 'bg-amber-50 border-[#A87A2A] font-bold text-[#A87A2A]' : 'bg-white border-stone-200 text-stone-700'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editingProduct.isSpotlight || editingProduct.isFeatured)}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, isSpotlight: e.target.checked, isFeatured: e.target.checked })}
+                        className="rounded accent-[#A87A2A]"
+                      />
+                      <span>⭐ Add to Spotlight</span>
+                    </label>
+
+                    <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      editingProduct.isOutfit ? 'bg-pink-50 border-[#E9A9BB] font-bold text-pink-800' : 'bg-white border-stone-200 text-stone-700'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editingProduct.isOutfit)}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, isOutfit: e.target.checked })}
+                        className="rounded accent-[#A87A2A]"
+                      />
+                      <span>👗 Add to Outfit (Look)</span>
+                    </label>
+
+                    <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      editingProduct.isNewArrival ? 'bg-emerald-50 border-emerald-300 font-bold text-emerald-800' : 'bg-white border-stone-200 text-stone-700'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editingProduct.isNewArrival)}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, isNewArrival: e.target.checked })}
+                        className="rounded accent-emerald-600"
+                      />
+                      <span>🌟 Add to New Arrival</span>
+                    </label>
+
+                    <label className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      editingProduct.isBestSeller ? 'bg-rose-50 border-rose-300 font-bold text-rose-800' : 'bg-white border-stone-200 text-stone-700'
+                    }`}>
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editingProduct.isBestSeller)}
+                        onChange={(e) => setEditingProduct({ ...editingProduct, isBestSeller: e.target.checked })}
+                        className="rounded accent-rose-600"
+                      />
+                      <span>🔥 Add to Best Seller</span>
+                    </label>
+                  </div>
+                </div>
+
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-stone-100">
                   {editingProduct.id ? (
                     <button
@@ -6216,6 +6755,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         <AdminInvoiceModal
           order={printingOrder}
           onClose={() => setPrintingOrder(null)}
+          settings={settingsMap}
         />
 
         {/* Deep Link & QR Generator Modal */}

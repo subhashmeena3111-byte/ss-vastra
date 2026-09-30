@@ -99,22 +99,45 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
 
     try {
       const isEmail = val.includes('@');
+      const cleanDigits = val.replace(/\D/g, '').slice(-10);
       const queryParam = isEmail
         ? `email=${encodeURIComponent(val)}`
-        : `phone=${encodeURIComponent(val.replace(/\D/g, ''))}`;
+        : `phone=${encodeURIComponent(cleanDigits)}`;
 
-      const res = await fetch(`/api/customer/orders?${queryParam}`);
-      const data = await res.json();
-
-      if (data.success && Array.isArray(data.orders)) {
-        setOrders(data.orders);
-        if (!isEmail) {
-          localStorage.setItem('ss_vastra_customer_phone', val);
-        } else {
-          localStorage.setItem('ss_vastra_customer_email', val);
+      let fetchedOrders: CustomerOrder[] = [];
+      try {
+        const res = await fetch(`/api/customer/orders?${queryParam}`);
+        const data = await res.json();
+        if (data.success && Array.isArray(data.orders)) {
+          fetchedOrders = data.orders;
         }
+      } catch {}
+
+      // Retrieve locally placed orders as well
+      const localCached: CustomerOrder[] = JSON.parse(
+        localStorage.getItem('ss_vastra_customer_orders') || '[]'
+      );
+      const matchingLocal = localCached.filter((o) => {
+        if (isEmail) {
+          return (o.customerEmail || '').toLowerCase().trim() === val.toLowerCase().trim();
+        }
+        const oPhone = (o.customerPhone || '').replace(/\D/g, '');
+        return cleanDigits && oPhone.endsWith(cleanDigits);
+      });
+
+      // Merge fetchedOrders and matchingLocal
+      const combined = [...fetchedOrders];
+      for (const lo of matchingLocal) {
+        if (!combined.some((c) => c.orderNumber === lo.orderNumber || (c.id && c.id === lo.id))) {
+          combined.push(lo);
+        }
+      }
+
+      setOrders(combined);
+      if (!isEmail) {
+        localStorage.setItem('ss_vastra_customer_phone', val);
       } else {
-        setOrders([]);
+        localStorage.setItem('ss_vastra_customer_email', val);
       }
     } catch {
       setError('Orders fetch karne mein dikkat aayi. Kripya dobara try karein.');
@@ -245,8 +268,8 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getStatusBadge(ord.orderStatus)}`}>
-                      {ord.orderStatus}
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${getStatusBadge(ord.orderStatus || ord.status || 'Placed')}`}>
+                      {ord.orderStatus || ord.status || 'Placed'}
                     </span>
                     <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-md ${ord.paymentStatus === 'paid' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}`}>
                       {ord.paymentStatus === 'paid' ? 'Paid Online' : 'COD'}
@@ -259,7 +282,7 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
                   {ord.items && ord.items.map((item) => (
                     <div key={item.id} className="py-2.5 flex items-center gap-3">
                       <img
-                        src={normalizeProductImageUrl(item.productImage || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=150&q=80')}
+                        src={normalizeProductImageUrl(item.productImage || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=150&q=80')}
                         alt={item.productName}
                         className="w-14 h-16 object-cover rounded-lg border border-stone-200 shrink-0"
                         onError={(e) => {
@@ -295,7 +318,7 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
                     <div className="flex items-center gap-2.5">
                       <Truck className="w-4 h-4 text-[#A87A2A]" />
                       <div className="text-xs">
-                        <span className="font-bold text-[#2B2320]">{ord.shipment.courierName}</span>
+                        <span className="font-bold text-[#2B2320]">{ord.shipment.courierName || ord.shipment.courierPartner || 'Delhivery Express'}</span>
                         <span className="text-stone-500 ml-1">
                           AWB: <code className="font-mono text-[#A87A2A]">{ord.shipment.trackingNumber}</code>
                         </span>

@@ -85,51 +85,73 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             if (target.src !== fallback && !target.src.includes('drive.google.com/thumbnail')) {
               target.src = fallback;
             } else {
-              target.src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
+              target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
             }
           }}
         />
 
-        {/* Direct Edit & Delete Controls directly on card */}
-        {(onEditProduct || onDeleteProduct) && (
-          <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-30 pointer-events-auto">
-            {discount > 0 && (
-              <span className="bg-[#A87A2A] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-xs">
-                {discount}% OFF
-              </span>
-            )}
-            {onEditProduct && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onEditProduct(product);
-                }}
-                className="p-1.5 px-2 rounded-xl bg-stone-900/95 hover:bg-[#A87A2A] text-amber-300 hover:text-white shadow-md transition-all hover:scale-105 cursor-pointer flex items-center gap-1 border border-amber-300/30"
-                title={`Edit ${product.name} (सीधा एडिट करें)`}
-              >
-                <Edit3 className="w-3.5 h-3.5 text-amber-300" />
-                <span className="text-[10px] font-bold">Edit</span>
-              </button>
-            )}
-            {onDeleteProduct && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onDeleteProduct(product);
-                }}
-                className="p-1.5 px-2 rounded-xl bg-rose-600/95 hover:bg-rose-700 text-white shadow-md transition-all hover:scale-105 cursor-pointer flex items-center gap-1 border border-rose-400/30"
-                title={`Delete ${product.name} (हटाएं)`}
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-                <span className="text-[10px] font-bold">Del</span>
-              </button>
-            )}
-          </div>
-        )}
+        {/* Product Badges (Discount, Spotlight, Outfit, New, Best Seller) */}
+        <div className="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1 z-30 pointer-events-auto max-w-[70%]">
+          {discount > 0 && (
+            <span className="bg-[#A87A2A] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-xs">
+              {discount}% OFF
+            </span>
+          )}
+          {(product.isSpotlight || product.isFeatured) && (
+            <span className="bg-amber-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+              ⭐ Spotlight
+            </span>
+          )}
+          {product.isOutfit && (
+            <span className="bg-pink-700 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+              👗 Outfit
+            </span>
+          )}
+          {product.isNewArrival && (
+            <span className="bg-emerald-700 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+              🌟 New
+            </span>
+          )}
+          {product.isBestSeller && (
+            <span className="bg-rose-700 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
+              🔥 Best
+            </span>
+          )}
+          {(onEditProduct || onDeleteProduct) && (
+            <div className="flex items-center gap-1 mt-0.5">
+              {onEditProduct && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onEditProduct(product);
+                  }}
+                  className="p-1 px-1.5 rounded-lg bg-stone-900/95 hover:bg-[#A87A2A] text-amber-300 hover:text-white shadow-md transition-all hover:scale-105 cursor-pointer flex items-center gap-1 border border-amber-300/30"
+                  title={`Edit ${product.name}`}
+                >
+                  <Edit3 className="w-3 h-3 text-amber-300" />
+                  <span className="text-[9px] font-bold">Edit</span>
+                </button>
+              )}
+              {onDeleteProduct && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    onDeleteProduct(product);
+                  }}
+                  className="p-1 px-1.5 rounded-lg bg-rose-600/95 hover:bg-rose-700 text-white shadow-md transition-all hover:scale-105 cursor-pointer flex items-center gap-1 border border-rose-400/30"
+                  title={`Delete ${product.name}`}
+                >
+                  <Trash2 className="w-3 h-3" />
+                  <span className="text-[9px] font-bold">Del</span>
+                </button>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* Top Right Actions: Share Deep Link & Wishlist */}
         <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 z-20">

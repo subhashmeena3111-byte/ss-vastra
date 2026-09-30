@@ -66,7 +66,7 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       id: 1,
       title: 'Elegance in Every Thread',
       subtitle: 'Ladies Fashion & Fabrics • Sanganer, Jaipur',
-      imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1000&q=85',
+      imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=85',
       ctaText: 'WhatsApp Par Order Karein',
       ctaLink: 'https://wa.me/919783770735',
       isActive: true,
@@ -110,7 +110,7 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       id: 3,
       slug: 'anarkali-dresses',
       name: 'Anarkali & Dresses',
-      image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=300&q=80',
+      image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80',
     },
     {
       id: 4,
@@ -133,6 +133,21 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
   ]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const categoryFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [uploadingCategoryId, setUploadingCategoryId] = useState<number | null>(null);
+  const [targetCategoryForUpload, setTargetCategoryForUpload] = useState<CategoryItem | null>(null);
+
+  // Load live categories from API
+  useEffect(() => {
+    fetch('/api/categories')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.categories) && data.categories.length > 0) {
+          setCategoriesList(data.categories);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Sync gallery when selected product changes
   useEffect(() => {
@@ -449,6 +464,65 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       reader.readAsDataURL(file);
     } catch (err: any) {
       showNotice('Photo read error: ' + (err?.message || 'Try again'));
+    }
+  };
+
+  const handleCategoryFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !targetCategoryForUpload) return;
+    const cat = targetCategoryForUpload;
+
+    setUploadingCategoryId(cat.id);
+    showNotice(`Optimizing and uploading photo for ${cat.name}...`);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const size = 600;
+          canvas.width = size;
+          canvas.height = size;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            const minDim = Math.min(img.width, img.height);
+            const sx = (img.width - minDim) / 2;
+            const sy = (img.height - minDim) / 2;
+            ctx.drawImage(img, sx, sy, minDim, minDim, 0, 0, size, size);
+          }
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.92);
+
+          try {
+            const upRes = await fetch('/api/upload', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                image: compressedBase64,
+                fileName: `category_${cat.slug || cat.id}`,
+              }),
+            });
+            const upData = await upRes.json();
+            const finalUrl = upData.url || compressedBase64;
+            await handleUpdateCategory(cat, finalUrl);
+          } catch {
+            await handleUpdateCategory(cat, compressedBase64);
+          } finally {
+            setUploadingCategoryId(null);
+            setTargetCategoryForUpload(null);
+            if (categoryFileInputRef.current) categoryFileInputRef.current.value = '';
+          }
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      showNotice('Upload error: ' + (err?.message || 'Try again'));
+      setUploadingCategoryId(null);
+      setTargetCategoryForUpload(null);
+      if (categoryFileInputRef.current) categoryFileInputRef.current.value = '';
     }
   };
 
@@ -983,43 +1057,100 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       {/* SECTION 3: CATEGORY IMAGES */}
       {activeSection === 'categories' && (
         <div className="bg-white p-5 rounded-2xl border border-stone-200 shadow-xs space-y-4">
-          <div>
-            <h3 className="font-serif text-lg font-bold text-[#2B2320]">
-              Category Round Thumbnails
-            </h3>
-            <p className="text-xs text-stone-500">
-              Update circular badge photos appearing on the home catalog navigation bar.
-            </p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-stone-100 pb-3">
+            <div>
+              <h3 className="font-serif text-lg font-bold text-[#2B2320]">
+                Category Round Thumbnails & Icons
+              </h3>
+              <p className="text-xs text-stone-500">
+                Update circular badge photos appearing on the home catalog navigation bar with high-definition crisp auto-crop.
+              </p>
+            </div>
+            <span className="text-[11px] text-stone-400 font-medium">
+              600x600 px recommended (Square auto-crop)
+            </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-            {categoriesList.map((cat) => (
-              <div
-                key={cat.id}
-                className="p-3 rounded-2xl border border-stone-200 bg-[#FBF7F0] flex items-center gap-3"
-              >
-                <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#A87A2A] shrink-0">
-                  <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
-                </div>
+          {/* Hidden category file upload input */}
+          <input
+            type="file"
+            ref={categoryFileInputRef}
+            onChange={handleCategoryFileUpload}
+            accept="image/*"
+            className="hidden"
+          />
 
-                <div className="flex-1 min-w-0">
-                  <span className="font-serif font-bold text-xs text-[#2B2320] block">
-                    {cat.name}
-                  </span>
-                  <input
-                    type="text"
-                    defaultValue={cat.image}
-                    onBlur={(e) => {
-                      if (e.target.value !== cat.image) {
-                        handleUpdateCategory(cat, e.target.value);
-                      }
-                    }}
-                    placeholder="Change image URL..."
-                    className="mt-1 w-full px-2 py-1 bg-white border border-stone-300 rounded text-[10px] focus:outline-none focus:border-[#A87A2A]"
-                  />
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+            {categoriesList.map((cat) => {
+              const isUploadingThis = uploadingCategoryId === cat.id;
+              const displayImg = normalizeProductImageUrl(cat.image);
+
+              return (
+                <div
+                  key={cat.id}
+                  className="p-3.5 rounded-2xl border border-stone-200 bg-[#FBF7F0] flex items-center gap-3.5 hover:shadow-xs transition-shadow"
+                >
+                  <div className="w-16 h-16 rounded-full overflow-hidden border-2 border-[#A87A2A] shrink-0 relative bg-[#F7E3E8] shadow-xs">
+                    <img
+                      src={displayImg}
+                      alt={cat.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        const fallback = getDriveThumbnailUrl(cat.image);
+                        if (e.currentTarget.src !== fallback) {
+                          e.currentTarget.src = fallback;
+                        }
+                      }}
+                    />
+                    {isUploadingThis && (
+                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
+                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <span className="font-serif font-bold text-xs text-[#2B2320] block truncate">
+                      {cat.name}
+                    </span>
+
+                    <button
+                      type="button"
+                      disabled={isUploadingThis}
+                      onClick={() => {
+                        setTargetCategoryForUpload(cat);
+                        categoryFileInputRef.current?.click();
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-[#A87A2A] hover:bg-[#8e6520] text-white text-[11px] font-bold flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                    >
+                      {isUploadingThis ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Uploading...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3 h-3" />
+                          <span>Upload Image</span>
+                        </>
+                      )}
+                    </button>
+
+                    <input
+                      type="text"
+                      defaultValue={cat.image}
+                      onBlur={(e) => {
+                        if (e.target.value !== cat.image) {
+                          handleUpdateCategory(cat, e.target.value);
+                        }
+                      }}
+                      placeholder="Or paste URL..."
+                      className="w-full px-2 py-0.5 bg-white border border-stone-300 rounded text-[10px] focus:outline-none focus:border-[#A87A2A] text-stone-600"
+                    />
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

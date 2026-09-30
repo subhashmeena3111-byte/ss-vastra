@@ -1,5 +1,6 @@
 import React from 'react';
 import { Category } from '../types.ts';
+import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
 
 interface CategoryRowProps {
   categories: Category[];
@@ -17,7 +18,7 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
     slug: 'all',
     name: 'All Products',
     icon: '✨',
-    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80',
   };
 
   const list = [allOption, ...categories];
@@ -46,6 +47,8 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
               selectedCategory.toLowerCase() === cat.name.toLowerCase() ||
               (cat.name === 'All Products' && (!selectedCategory || selectedCategory === 'All Products'));
 
+            const normalizedImg = normalizeProductImageUrl(cat.image);
+
             return (
               <button
                 key={cat.id + cat.name}
@@ -62,9 +65,17 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
                   <div className="w-full h-full rounded-full overflow-hidden bg-[#F7E3E8] relative flex items-center justify-center">
                     {cat.image ? (
                       <img
-                        src={cat.image}
+                        src={normalizedImg}
                         alt={cat.name}
+                        loading="eager"
                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const fallback = getDriveThumbnailUrl(cat.image || '');
+                          if (target.src !== fallback) {
+                            target.src = fallback;
+                          }
+                        }}
                       />
                     ) : (
                       <span className="text-2xl">{cat.icon || '👗'}</span>

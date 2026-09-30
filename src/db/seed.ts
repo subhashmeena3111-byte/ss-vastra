@@ -105,7 +105,7 @@ export async function seedDatabase() {
           slug: 'kurta-sets',
           name: 'Kurta Sets',
           icon: '👗',
-          image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80',
+          image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80',
           description: 'Graceful embroidered and printed ethnic kurta sets with bottoms & dupattas.',
           displayOrder: 1,
         },
@@ -171,7 +171,7 @@ export async function seedDatabase() {
 
     // 4. Check or Seed Products
     const existingProducts = await db.select().from(products);
-    if (existingProducts.length === 0) {
+    if (existingProducts.length === 0 && process.env.SEED_DEMO_PRODUCTS === 'true') {
       const initialProducts = [
         {
           slug: 'red-embroidered-cotton-blend-kurta-set',
@@ -182,7 +182,7 @@ export async function seedDatabase() {
           discountPercent: 30,
           sizes: JSON.stringify(['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']),
           stock: 45,
-          image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=900&q=80',
+          image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=900&q=80',
           description: 'A graceful, comfortable crimson red kurta set featuring intricate neck embroidery, flattering flared fit, and matching cigarette pants with dupatta.',
           fabric: 'Premium Cotton Blend',
           color: 'Crimson Red',
@@ -468,7 +468,7 @@ export async function seedDatabase() {
         {
           title: 'Elegance in Every Thread',
           subtitle: 'Ladies Fashion & Fabrics',
-          imageUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=1600&q=85',
+          imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1600&q=85',
           ctaText: 'Explore Collections',
           ctaLink: '#products-section',
           isActive: true,

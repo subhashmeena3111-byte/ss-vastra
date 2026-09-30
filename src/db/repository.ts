@@ -113,7 +113,7 @@ export function formatProductRecord(p: any, galleryImages?: string[]) {
     ? p.gallery
     : Array.isArray(p.images) && p.images.length > 0
     ? p.images
-    : [p.image || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'];
+    : [p.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80'];
 
   return {
     ...p,
@@ -429,6 +429,9 @@ export async function deleteCouponRecord(id: number) {
 
 // 6. Orders
 export async function getOrdersList(): Promise<LocalOrder[]> {
+  const localList = localStore.getOrders() || [];
+  let dbMappedList: LocalOrder[] = [];
+
   if (await isDbReady()) {
     try {
       const list = await db.select().from(orders).orderBy(desc(orders.id));
@@ -436,7 +439,7 @@ export async function getOrdersList(): Promise<LocalOrder[]> {
         const allItems = await db.select().from(orderItems);
         const allShipments = await db.select().from(shipments);
 
-        return list.map((o) => {
+        dbMappedList = list.map((o) => {
           const items = allItems.filter((i) => i.orderId === o.id);
           const shipment = allShipments.find((s) => s.orderId === o.id);
           const mappedOrder: LocalOrder = {
@@ -486,13 +489,29 @@ export async function getOrdersList(): Promise<LocalOrder[]> {
       markDbOffline();
     }
   }
-  return localStore.getOrders();
+
+  const combined = [...dbMappedList];
+  for (const lo of localList) {
+    const exists = combined.some(
+      (c) =>
+        (c.orderNumber && lo.orderNumber && c.orderNumber.toUpperCase() === lo.orderNumber.toUpperCase()) ||
+        (c.id && lo.id && c.id === lo.id)
+    );
+    if (!exists) {
+      combined.push(lo);
+    }
+  }
+
+  return combined.sort(
+    (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime()
+  );
 }
 
 export async function getOrderByNumber(orderNumber: string) {
+  const normNumber = String(orderNumber || '').trim().toUpperCase();
   if (await isDbReady()) {
     try {
-      const found = await db.select().from(orders).where(eq(orders.orderNumber, orderNumber));
+      const found = await db.select().from(orders).where(eq(orders.orderNumber, normNumber));
       if (found && found.length > 0) {
         const o = found[0];
         const items = await db.select().from(orderItems).where(eq(orderItems.orderId, o.id));
@@ -509,7 +528,11 @@ export async function getOrderByNumber(orderNumber: string) {
       markDbOffline();
     }
   }
-  return localStore.getOrderByNumber(orderNumber);
+  const fromLocal = localStore.getOrderByNumber(normNumber);
+  if (fromLocal) return fromLocal;
+
+  const all = localStore.getOrders();
+  return all.find((o) => (o.orderNumber || '').trim().toUpperCase() === normNumber) || null;
 }
 
 export async function createOrderRecord(
