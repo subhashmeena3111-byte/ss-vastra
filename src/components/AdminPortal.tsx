@@ -1224,12 +1224,49 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
     }
   };
 
+  // Helper to normalize status strings to exact option values
+  const getFormattedStatus = (statusStr?: string) => {
+    const s = String(statusStr || 'Placed').trim().toLowerCase();
+    if (s === 'confirmed') return 'Confirmed';
+    if (s === 'processing') return 'Processing';
+    if (s === 'packed') return 'Packed';
+    if (s === 'shipped') return 'Shipped';
+    if (s === 'out for delivery' || s === 'out_for_delivery') return 'Out for Delivery';
+    if (s === 'delivered') return 'Delivered';
+    if (s === 'cancelled' || s === 'canceled') return 'Cancelled';
+    if (s === 'returned') return 'Returned';
+    return 'Placed';
+  };
+
   // Order Actions
   const handleUpdateOrderStatus = async (orderId: number, status: string) => {
-    // Optimistic state update in ordersList
+    const formatted = getFormattedStatus(status);
+
+    // 1. Instant optimistic update in ordersList state
     setOrdersList((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, orderStatus: status, status } : o))
+      prev.map((o) => (o.id === orderId ? { ...o, orderStatus: formatted, status: formatted } : o))
     );
+
+    // 2. Also persist in localStorage so Track Order & Customer view reflect change immediately
+    try {
+      const stored = localStorage.getItem('ss_vastra_customer_orders');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const updated = parsed.map((o: any) =>
+            o.id === orderId || o.orderNumber === String(orderId)
+              ? { ...o, orderStatus: formatted, status: formatted }
+              : o
+          );
+          localStorage.setItem('ss_vastra_customer_orders', JSON.stringify(updated));
+        }
+      }
+    } catch {}
+
+    setActionMessage(`Order #${orderId} ka status ab "${formatted}" set ho gaya hai!`);
+    setTimeout(() => setActionMessage(null), 3500);
+
+    // 3. Sync with backend API in background
     try {
       const res = await fetch(`/api/admin/orders/${orderId}/status`, {
         method: 'PATCH',
@@ -1237,19 +1274,18 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify({ status: formatted }),
       });
-      const data = await res.json();
-      if (data.success) {
-        setActionMessage(`Order #${orderId} marked as ${status}`);
-        setTimeout(() => setActionMessage(null), 3000);
-      } else {
-        alert(data.error || 'Failed to update order status');
-        loadTabData('orders');
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}));
+        if (data.success && data.order) {
+          setOrdersList((prev) =>
+            prev.map((o) => (o.id === orderId ? { ...o, ...data.order } : o))
+          );
+        }
       }
-    } catch {
-      alert('Failed to update status');
-      loadTabData('orders');
+    } catch (err) {
+      console.warn('Order status sync note:', err);
     }
   };
 
@@ -3820,7 +3856,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                   </td>
                                   <td className="p-3">
                                     <select
-                                      value={ord.orderStatus}
+                                      value={getFormattedStatus(ord.orderStatus || ord.status || 'Placed')}
                                       onChange={(e) => handleUpdateOrderStatus(ord.id, e.target.value)}
                                       className="px-2 py-1 rounded-lg border border-stone-300 font-medium text-xs bg-white focus:outline-none focus:border-[#A87A2A]"
                                     >
@@ -6803,6 +6839,33 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                     placeholder="9414012345"
                                     value={settingsMap['support_whatsapp_3'] || ''}
                                     onChange={(e) => setSettingsMap({ ...settingsMap, support_whatsapp_3: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white font-mono"
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Channel 4 */}
+                              <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-xl space-y-1.5">
+                                <span className="font-bold text-sky-700 text-[11px] block">
+                                  Channel 4: Wholesale & B2B / Owner Direct
+                                </span>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">Agent / Staff Name</label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. Subhash Meena (Founder & B2B)"
+                                    value={settingsMap['support_name_4'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_name_4: e.target.value })}
+                                    className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-[10px] text-stone-600 block">WhatsApp Number (10 digits)</label>
+                                  <input
+                                    type="tel"
+                                    placeholder="7014897197"
+                                    value={settingsMap['support_whatsapp_4'] || ''}
+                                    onChange={(e) => setSettingsMap({ ...settingsMap, support_whatsapp_4: e.target.value })}
                                     className="w-full px-2.5 py-1.5 rounded-lg border border-stone-300 text-xs bg-white font-mono"
                                   />
                                 </div>

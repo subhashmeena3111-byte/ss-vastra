@@ -57,8 +57,9 @@ export const FloatingWhatsApp: React.FC = () => {
           const p1 = (map['support_whatsapp_1'] || map['whatsapp'] || map['phone'] || '9783770735').replace(/\D/g, '').slice(-10);
           const p2 = (map['support_whatsapp_2'] || map['phone'] || p1).replace(/\D/g, '').slice(-10);
           const p3 = (map['support_whatsapp_3'] || '9783770735').replace(/\D/g, '').slice(-10);
+          const p4 = (map['support_whatsapp_4'] || '').replace(/\D/g, '').slice(-10);
 
-          setChannels([
+          const list: WhatsAppSupportChannel[] = [
             {
               id: 'sales',
               name: map['support_name_1'] || 'Pooja (Styling & Orders)',
@@ -86,7 +87,21 @@ export const FloatingWhatsApp: React.FC = () => {
               icon: 'scissors',
               defaultMessage: 'Namaste! Mujhe custom sizing, bust fit, aur fabric details ke bare mein expert help chahiye.',
             },
-          ]);
+          ];
+
+          if (p4) {
+            list.push({
+              id: 'b2b',
+              name: map['support_name_4'] || 'Subhash Meena (Founder & B2B)',
+              role: 'Wholesale, Bulk & Special Inquiries',
+              phone: p4,
+              avatarColor: 'bg-sky-600',
+              icon: 'bag',
+              defaultMessage: 'Namaste Subhash ji! Mujhe SS VASTRA ke wholesale / bulk orders ke bare me baat karni hai.',
+            });
+          }
+
+          setChannels(list);
         }
       })
       .catch(() => {});

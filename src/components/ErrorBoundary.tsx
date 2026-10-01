@@ -33,18 +33,35 @@ export class ErrorBoundary extends Component<Props, State> {
     } catch {}
   }
 
-  private handleReset = () => {
+  private purgeBrowserCaches = async () => {
+    try {
+      if ('caches' in window) {
+        const cacheKeys = await caches.keys();
+        await Promise.all(cacheKeys.map((k) => caches.delete(k)));
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const reg of registrations) {
+          await reg.unregister();
+        }
+      }
+    } catch {}
+  };
+
+  private handleReset = async () => {
+    await this.purgeBrowserCaches();
     try {
       localStorage.removeItem('ss_vastra_custom_products');
       localStorage.removeItem('ss_vastra_deleted_product_ids');
       localStorage.removeItem('ss_vastra_cart');
     } catch {}
-    window.location.href = '/';
+    window.location.href = '/?refresh=' + Date.now();
   };
 
-  private handleAdminRecovery = () => {
+  private handleAdminRecovery = async () => {
+    await this.purgeBrowserCaches();
     this.setState({ hasError: false });
-    window.location.href = '/admin';
+    window.location.href = '/admin?refresh=' + Date.now();
   };
 
   public render() {
