@@ -15,8 +15,20 @@ function ensureCloudSync(): Promise<void> {
 }
 
 export default async function handler(req: Request, res: Response) {
-  // Normalize req.url so both /api/... and stripped /... work seamlessly on Vercel
-  if (req.url && !req.url.startsWith('/api')) {
+  // Normalize req.url so both /api/... and subpaths work seamlessly on Vercel
+  const allParam = (req as any).query?.all;
+  const matchedPath = (req.headers['x-matched-path'] as string) || '';
+
+  if (allParam) {
+    const subpath = Array.isArray(allParam) ? allParam.join('/') : allParam;
+    const queryIdx = (req.url || '').indexOf('?');
+    const qs = queryIdx !== -1 ? (req.url || '').slice(queryIdx) : '';
+    req.url = `/api/${subpath}${qs}`;
+  } else if (matchedPath && matchedPath.startsWith('/api') && (req.url === '/api' || req.url === '/api/')) {
+    const queryIdx = (req.url || '').indexOf('?');
+    const qs = queryIdx !== -1 ? (req.url || '').slice(queryIdx) : '';
+    req.url = `${matchedPath}${qs}`;
+  } else if (req.url && !req.url.startsWith('/api')) {
     req.url = '/api' + (req.url.startsWith('/') ? req.url : '/' + req.url);
   }
 
@@ -30,6 +42,11 @@ export default async function handler(req: Request, res: Response) {
     return res.status(200).end();
   }
 
+  // Quick health response if base /api or /api/ is hit
+  if (req.url === '/api' || req.url === '/api/') {
+    return res.status(200).json({ success: true, service: 'SS VASTRA API', status: 'online' });
+  }
+
   // Ensure latest Firestore data is synchronized into localStore before handling request
   try {
     const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '');
@@ -38,5 +55,12 @@ export default async function handler(req: Request, res: Response) {
     console.warn('Vercel serverless cloud sync note:', err);
   }
 
-  return app(req, res);
+  try {
+    return app(req, res);
+  } catch (err: any) {
+    console.error('Vercel serverless uncaught error:', err);
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, error: err?.message || 'Server execution error' });
+    }
+  }
 }

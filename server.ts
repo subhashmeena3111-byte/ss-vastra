@@ -186,6 +186,11 @@ function generateOrderNumber(): string {
    PUBLIC / CUSTOMER STOREFRONT ENDPOINTS
    ========================================================================== */
 
+// 0. API Health Check
+app.get(['/api', '/api/health'], (_req: Request, res: Response) => {
+  res.json({ success: true, service: 'SS VASTRA API', status: 'online', timestamp: new Date().toISOString() });
+});
+
 // 1. Store settings
 app.get('/api/settings', async (_req: Request, res: Response) => {
   try {
