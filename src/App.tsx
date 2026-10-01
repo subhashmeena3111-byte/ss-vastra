@@ -26,9 +26,10 @@ import { ConfirmDeleteModal } from './components/ConfirmDeleteModal.tsx';
 import { VideoReelsSection } from './components/VideoReelsSection.tsx';
 import { Product, Category, CartItem, Banner } from './types.ts';
 import { sanitizeProductList } from './utils/productUtils.ts';
+import { getDefaultProducts } from './data/defaultProducts.ts';
 
-// Catalog starts clean: data loads dynamically from live database
-const INITIAL_PRODUCTS: Product[] = [];
+// Initial curated Jaipur ethnic outfits for instant storefront presentation
+const INITIAL_PRODUCTS: Product[] = getDefaultProducts();
 
 const INITIAL_CATEGORIES: Category[] = [
   {
@@ -642,19 +643,22 @@ export function App() {
         } catch {}
       }
 
+      const deletedIds: number[] = JSON.parse(
+        localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+      );
+
+      // Fallback to curated outfits if server returned empty and catalog was not purged
+      if (list.length === 0 && !deletedIds.includes(1)) {
+        list = getDefaultProducts();
+      }
+
       // Merge newly added custom products only if not in deleted IDs
       try {
-        const deletedIds: number[] = JSON.parse(
-          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-        );
         const rawCustom = JSON.parse(
           localStorage.getItem('ss_vastra_custom_products') || '[]'
         );
         const customProds: Product[] = sanitizeProductList(rawCustom).filter(
-          (cp) =>
-            !deletedIds.includes(cp.id) &&
-            cp.isDemo !== true &&
-            (typeof cp.id !== 'number' || cp.id > 8)
+          (cp) => !deletedIds.includes(cp.id)
         );
         for (const cp of customProds) {
           const idx = list.findIndex((p) => p.id === cp.id);
@@ -670,7 +674,25 @@ export function App() {
       setProducts(cleanList);
       handleParseDeepLink(cleanList, categories);
     } catch {
-      // In case of network error, do not overwrite with demo data
+      // In case of network error, fallback safely while respecting deleted IDs
+      try {
+        const deletedIds: number[] = JSON.parse(
+          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
+        );
+        let fallbackList: Product[] = deletedIds.includes(1) ? [] : getDefaultProducts();
+        const rawCustom = JSON.parse(
+          localStorage.getItem('ss_vastra_custom_products') || '[]'
+        );
+        const customProds: Product[] = sanitizeProductList(rawCustom).filter(
+          (cp) => !deletedIds.includes(cp.id)
+        );
+        for (const cp of customProds) {
+          const idx = fallbackList.findIndex((p) => p.id === cp.id);
+          if (idx >= 0) fallbackList[idx] = { ...fallbackList[idx], ...cp };
+          else fallbackList.unshift(cp);
+        }
+        setProducts(sanitizeProductList(fallbackList));
+      } catch {}
     }
   };
 

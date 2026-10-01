@@ -26,9 +26,8 @@ export class ErrorBoundary extends Component<Props, State> {
     console.error('SS Vastra caught an uncaught UI error:', error, errorInfo);
     this.setState({ errorInfo });
 
-    // Auto-heal potentially corrupted localStorage data
+    // Auto-heal potentially corrupted cart data while keeping custom products safe
     try {
-      localStorage.removeItem('ss_vastra_custom_products');
       localStorage.removeItem('ss_vastra_cart');
     } catch {}
   }

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import bcrypt from 'bcryptjs';
+import { getDefaultLocalProducts } from '../data/defaultProducts.ts';
 
 const DATA_DIR = path.resolve('data');
 const STORE_FILE = path.join(DATA_DIR, 'store.json');
@@ -277,7 +278,7 @@ function createInitialData(): LocalStoreData {
   ];
 
   // Clean product catalog ready for owner's real outfits
-  const products: LocalProduct[] = [];
+  const products: LocalProduct[] = getDefaultLocalProducts();
 
   const admins: LocalAdmin[] = [
     {
@@ -579,6 +580,11 @@ class LocalStoreManager {
         if (!deletedIds.includes(cp.id) && !prods.some((p) => p.id === cp.id)) {
           prods.unshift(cp);
         }
+      }
+
+      // Auto-seed curated Jaipur outfits if catalog is empty and not explicitly purged
+      if (prods.length === 0 && customProds.length === 0 && !deletedIds.includes(1)) {
+        prods = getDefaultLocalProducts();
       }
 
       // Mark demo products correctly (IDs <= 8 or isDemo === true)
