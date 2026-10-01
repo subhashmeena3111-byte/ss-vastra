@@ -1,17 +1,22 @@
 process.env.VERCEL = '1';
 
 import type { Request, Response } from 'express';
-import app from '../server.ts';
-import { syncWithCloud } from '../src/db/cloudSync.ts';
 
-let cloudSyncPromise: Promise<void> | null = null;
-function ensureCloudSync(): Promise<void> {
-  if (!cloudSyncPromise) {
-    cloudSyncPromise = syncWithCloud().catch((err) => {
-      console.warn('Vercel serverless cloud sync note:', err?.message || err);
-    });
+let appInstance: any = null;
+let appLoadError: any = null;
+
+async function getApp() {
+  if (appInstance) return appInstance;
+  if (appLoadError) throw appLoadError;
+  try {
+    process.env.VERCEL = '1';
+    const serverMod = await import('../server.ts');
+    appInstance = serverMod.default || serverMod.app;
+    return appInstance;
+  } catch (err) {
+    appLoadError = err;
+    throw err;
   }
-  return cloudSyncPromise;
 }
 
 export default async function handler(req: Request, res: Response) {
@@ -42,25 +47,27 @@ export default async function handler(req: Request, res: Response) {
     return res.status(200).end();
   }
 
-  // Quick health response if base /api or /api/ is hit
-  if (req.url === '/api' || req.url === '/api/') {
-    return res.status(200).json({ success: true, service: 'SS VASTRA API', status: 'online' });
-  }
-
-  // Ensure latest Firestore data is synchronized into localStore before handling request
-  try {
-    const isMutation = ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method || '');
-    await syncWithCloud(isMutation);
-  } catch (err) {
-    console.warn('Vercel serverless cloud sync note:', err);
+  // Quick health response without loading heavy server bundle
+  if (req.url === '/api' || req.url === '/api/' || req.url === '/api/health') {
+    return res.status(200).json({
+      success: true,
+      service: 'SS VASTRA API',
+      status: 'online',
+      env: 'vercel-serverless',
+      time: new Date().toISOString(),
+    });
   }
 
   try {
+    const app = await getApp();
     return app(req, res);
   } catch (err: any) {
-    console.error('Vercel serverless uncaught error:', err);
-    if (!res.headersSent) {
-      res.status(500).json({ success: false, error: err?.message || 'Server execution error' });
-    }
+    console.error('Vercel serverless load error:', err);
+    return res.status(200).json({
+      success: false,
+      diagnosticError: true,
+      message: err?.message || String(err),
+      stack: err?.stack,
+    });
   }
 }
