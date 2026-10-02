@@ -10,6 +10,10 @@ import {
   Send,
   CheckCircle,
   ExternalLink,
+  ShoppingBag,
+  Truck,
+  Scissors,
+  Users,
 } from 'lucide-react';
 
 interface ContactModalProps {
@@ -94,34 +98,92 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               </button>
             </div>
 
-            <div className="space-y-2.5">
+            {/* Multiple Dedicated WhatsApp Helpline Options */}
+            <div className="space-y-2">
+              <span className="block text-[11px] font-bold text-stone-700 uppercase tracking-wider">
+                WhatsApp Contact Options (विभागीय सहायता):
+              </span>
+
+              {/* Option 1: New Orders & Fashion Styling */}
               <a
-                href="https://wa.me/919783770735"
+                href="https://wa.me/919783770735?text=Namaste%20SS%20VASTRA!%20Mujhe%20naye%20outfits%20dekhne%20aur%20order%20karne%20ke%20bare%20mein%20jankari%20chahiye."
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 transition-colors font-semibold"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-900 transition-all font-semibold hover:shadow-xs group"
               >
-                <MessageCircle className="w-4 h-4 text-emerald-600 shrink-0" />
-                <div className="text-left">
-                  <div className="text-[10px] text-emerald-600 uppercase font-bold">WhatsApp Direct</div>
-                  <div className="text-xs">+91 9783770735</div>
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <ShoppingBag className="w-4 h-4" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <div className="text-[11px] font-bold text-[#2B2320] group-hover:text-emerald-700">1. Orders & New Booking</div>
+                  <div className="text-[10px] text-stone-500 truncate">Designs & Shopping Help • +91 9783770735</div>
                 </div>
               </a>
 
+              {/* Option 2: Parcel Tracking & Dispatch */}
+              <a
+                href="https://wa.me/919783770735?text=Namaste%20SS%20VASTRA!%20Mujhe%20mere%20parcel%20dispatch%20aur%20live%20tracking%20status%20ke%20bare%20mein%20puchna%20hai."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-50/80 hover:bg-amber-100/80 border border-amber-200 text-amber-900 transition-all font-semibold hover:shadow-xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-amber-600 text-white flex items-center justify-center shrink-0">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <div className="text-[11px] font-bold text-[#2B2320] group-hover:text-amber-800">2. Tracking & Delivery</div>
+                  <div className="text-[10px] text-stone-500 truncate">Courier & Dispatch Status • +91 9783770735</div>
+                </div>
+              </a>
+
+              {/* Option 3: Size & Custom Stitching */}
+              <a
+                href="https://wa.me/919783770735?text=Namaste%20SS%20VASTRA!%20Mujhe%20suit%20fitting%2C%20custom%20sizing%20aur%20alteration%20ke%20bare%20mein%20guidance%20chahiye."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-rose-50/80 hover:bg-rose-100/80 border border-rose-200 text-rose-900 transition-all font-semibold hover:shadow-xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-rose-600 text-white flex items-center justify-center shrink-0">
+                  <Scissors className="w-4 h-4" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <div className="text-[11px] font-bold text-[#2B2320] group-hover:text-rose-800">3. Sizing & Alteration</div>
+                  <div className="text-[10px] text-stone-500 truncate">Masterji Atelier Help • +91 9783770735</div>
+                </div>
+              </a>
+
+              {/* Option 4: Wholesale & B2B Inquiries */}
+              <a
+                href="https://wa.me/919783770735?text=Namaste%20Subhash%20ji!%20Mujhe%20SS%20VASTRA%20se%20wholesale%20%2F%20bulk%20boutique%20orders%20ke%20bare%20mein%20baat%20karni%20hai."
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-sky-50/80 hover:bg-sky-100/80 border border-sky-200 text-sky-900 transition-all font-semibold hover:shadow-xs group"
+              >
+                <div className="w-8 h-8 rounded-lg bg-sky-600 text-white flex items-center justify-center shrink-0">
+                  <Users className="w-4 h-4" />
+                </div>
+                <div className="text-left flex-1 min-w-0">
+                  <div className="text-[11px] font-bold text-[#2B2320] group-hover:text-sky-800">4. Wholesale & B2B Orders</div>
+                  <div className="text-[10px] text-stone-500 truncate">Bulk & Boutique Reselling • +91 9783770735</div>
+                </div>
+              </a>
+            </div>
+
+            <div className="space-y-2 pt-2 border-t border-stone-200">
               <a
                 href="tel:9783770735"
-                className="flex items-center gap-3 p-3 rounded-xl bg-[#FBF7F0] hover:bg-[#F7E3E8]/50 border border-[#E9A9BB]/40 text-[#2B2320] transition-colors font-semibold"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-[#FBF7F0] hover:bg-[#F7E3E8]/50 border border-[#E9A9BB]/40 text-[#2B2320] transition-colors font-semibold"
               >
                 <Phone className="w-4 h-4 text-[#A87A2A] shrink-0" />
                 <div className="text-left">
-                  <div className="text-[10px] text-stone-500 uppercase font-bold">Call Us</div>
+                  <div className="text-[10px] text-stone-500 uppercase font-bold">Direct Phone Call</div>
                   <div className="text-xs">9783770735</div>
                 </div>
               </a>
 
               <a
                 href="mailto:subhashmeena3111@gmail.com"
-                className="flex items-center gap-3 p-3 rounded-xl bg-[#FBF7F0] hover:bg-[#F7E3E8]/50 border border-[#E9A9BB]/40 text-[#2B2320] transition-colors font-semibold"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-[#FBF7F0] hover:bg-[#F7E3E8]/50 border border-[#E9A9BB]/40 text-[#2B2320] transition-colors font-semibold"
               >
                 <Mail className="w-4 h-4 text-[#A87A2A] shrink-0" />
                 <div className="text-left">
@@ -134,7 +196,7 @@ export const ContactModal: React.FC<ContactModalProps> = ({
                 href="https://instagram.com/SS_vastra"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 p-3 rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-900 transition-colors font-semibold"
+                className="flex items-center gap-3 p-2.5 rounded-xl bg-pink-50 hover:bg-pink-100 border border-pink-200 text-pink-900 transition-colors font-semibold"
               >
                 <Instagram className="w-4 h-4 text-pink-600 shrink-0" />
                 <div className="text-left">

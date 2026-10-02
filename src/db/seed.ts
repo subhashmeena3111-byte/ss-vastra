@@ -105,7 +105,7 @@ export async function seedDatabase() {
           slug: 'kurta-sets',
           name: 'Kurta Sets',
           icon: '👗',
-          image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80',
+          image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80',
           description: 'Graceful embroidered and printed ethnic kurta sets with bottoms & dupattas.',
           displayOrder: 1,
         },
@@ -174,28 +174,6 @@ export async function seedDatabase() {
     if (existingProducts.length === 0 && process.env.SEED_DEMO_PRODUCTS === 'true') {
       const initialProducts = [
         {
-          slug: 'red-embroidered-cotton-blend-kurta-set',
-          name: 'Red Embroidered Cotton Blend Kurta Set',
-          category: 'Kurta Sets',
-          price: 1899,
-          originalPrice: 2699,
-          discountPercent: 30,
-          sizes: JSON.stringify(['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL']),
-          stock: 45,
-          image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=900&q=80',
-          description: 'A graceful, comfortable crimson red kurta set featuring intricate neck embroidery, flattering flared fit, and matching cigarette pants with dupatta.',
-          fabric: 'Premium Cotton Blend',
-          color: 'Crimson Red',
-          highlights: JSON.stringify(['Stylish V-Neck', 'Beautiful Embroidery', 'Flair Fit', 'Premium Cotton Blend', 'Soft & Comfortable']),
-          isNewArrival: true,
-          isBestSeller: true,
-          isFeatured: true,
-          extraImages: [
-            'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=900&q=80',
-            'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=900&q=80',
-          ],
-        },
-        {
           slug: 'bloom-in-grace-fuchsia-pink-anarkali-set',
           name: 'Bloom in Grace Fuchsia Pink Anarkali Set',
           category: 'Anarkali & Dresses',
@@ -211,7 +189,7 @@ export async function seedDatabase() {
           highlights: JSON.stringify(['Handmade Tassels', 'Flared Ghera', 'Breathable Muslin', 'Festive Ready']),
           isNewArrival: true,
           isBestSeller: true,
-          isFeatured: false,
+          isFeatured: true,
           extraImages: [
             'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=900&q=80',
           ],
@@ -468,7 +446,7 @@ export async function seedDatabase() {
         {
           title: 'Elegance in Every Thread',
           subtitle: 'Ladies Fashion & Fabrics',
-          imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1600&q=85',
+          imageUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1600&q=85',
           ctaText: 'Explore Collections',
           ctaLink: '#products-section',
           isActive: true,

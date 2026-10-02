@@ -51,7 +51,7 @@ const INITIAL_CATEGORIES: Category[] = [
     slug: 'anarkali-dresses',
     name: 'Anarkali & Dresses',
     icon: '💃',
-    image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=300&q=80',
   },
   {
     id: 4,
@@ -524,7 +524,6 @@ export function App() {
               (p: any) =>
                 !(
                   p.isDemo === true ||
-                  (typeof p.id === 'number' && p.id <= 8) ||
                   (p.name && (
                     p.name.includes('Red Embroidered') ||
                     p.name.includes('Gulabi Pink') ||
@@ -883,7 +882,7 @@ export function App() {
                   </span>
                 </span>
                 <p className="text-[11px] text-stone-500">
-                  {products.length} Outfits active | Demo Data: {products.filter((p) => p.isDemo || p.id <= 8).length}
+                  {products.length} Outfits active | Demo Data: {products.filter((p) => Boolean(p.isDemo)).length}
                 </p>
               </div>
             </div>
@@ -1029,9 +1028,7 @@ export function App() {
                   onShareDeepLink={(p) => handleOpenDeepLinkModal(p)}
                   isWishlisted={wishlistIds.includes(product.id)}
                   onToggleWishlist={handleToggleWishlist}
-                  isAdmin={isAdminLoggedIn}
-                  onDeleteProduct={handleAdminDeleteProduct}
-                  onEditProduct={handleAdminEditProduct}
+                  isAdmin={false}
                 />
               ))}
             </div>
@@ -1120,9 +1117,7 @@ export function App() {
         onOpenDeepLink={(p) => handleOpenDeepLinkModal(p)}
         isWishlisted={detailProduct ? wishlistIds.includes(detailProduct.id) : false}
         onToggleWishlist={handleToggleWishlist}
-        isAdmin={isAdminLoggedIn}
-        onDeleteProduct={handleAdminDeleteProduct}
-        onEditProduct={handleAdminEditProduct}
+        isAdmin={false}
       />
 
       <QuickEditProductModal

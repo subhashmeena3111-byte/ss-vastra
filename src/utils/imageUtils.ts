@@ -31,7 +31,7 @@ export function isGoogleDriveUrl(url: string): boolean {
 }
 
 const GUARANTEED_FALLBACK =
-  'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
+  'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
 
 /**
  * Transforms any Google Drive URL (view link, sharing link, export link, etc.)

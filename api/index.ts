@@ -95,7 +95,7 @@ export default async function handler(req: Request, res: Response) {
         success: true,
         source: 'serverless-catalog',
         categories: [
-          { id: 1, slug: 'kurta-sets', name: 'Kurta Sets', icon: '👗', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80', description: 'Graceful embroidered and printed ethnic kurta sets.', displayOrder: 1 },
+          { id: 1, slug: 'kurta-sets', name: 'Kurta Sets', icon: '👗', image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80', description: 'Graceful embroidered and printed ethnic kurta sets.', displayOrder: 1 },
           { id: 2, slug: 'co-ord-sets', name: 'Co-ord Sets', icon: '👚', image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=600&q=80', description: 'Contemporary matching sets designed for festive flair.', displayOrder: 2 },
           { id: 3, slug: 'anarkali-dresses', name: 'Anarkali & Dresses', icon: '💃', image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=600&q=80', description: 'Flowing flares, fine muslin cotton and gotapatti lace.', displayOrder: 3 },
           { id: 4, slug: 'kurta-kurtis', name: 'Kurta / Kurtis', icon: '🌸', image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80', description: 'Breathable Jaipur cotton tunics and daily office staples.', displayOrder: 4 },
@@ -103,6 +103,39 @@ export default async function handler(req: Request, res: Response) {
           { id: 6, slug: 'fabrics', name: 'Fabrics', icon: '🧵', image: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=600&q=80', description: 'Direct from Sanganer master wooden handblock cambric & mulmul cotton.', displayOrder: 6 },
           { id: 7, slug: 'new-arrivals', name: 'New Arrivals', icon: '🌟', image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=600&q=80', description: 'Freshly loomed designs and latest seasonal silhouettes.', displayOrder: 7 },
           { id: 8, slug: 'best-sellers', name: 'Best Sellers', icon: '🔥', image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=600&q=80', description: 'Most loved Jaipur creations ordered across India.', displayOrder: 8 },
+        ],
+      });
+    }
+
+    if (req.method === 'GET' && (pathname === '/api/reels' || pathname === '/reels')) {
+      return res.status(200).json({
+        success: true,
+        source: 'serverless-reels',
+        reels: [
+          {
+            id: 1,
+            title: 'Royal Anarkali Handblock Drape',
+            videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-an-orange-dress-41130-large.mp4',
+            posterUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+            productTitle: 'Pure Cambric Cotton Jaipuri Anarkali Suit',
+            productPrice: 2499,
+            productImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
+            badge: 'Trending 🔥',
+            displayOrder: 1,
+            isActive: true,
+          },
+          {
+            id: 2,
+            title: 'Jaipur Handcrafted Farshi Suit Fit',
+            videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-posing-in-a-white-dress-and-a-hat-41133-large.mp4',
+            posterUrl: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
+            productTitle: 'Blush Pink Cotton Farshi Suit Set',
+            productPrice: 1850,
+            productImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800',
+            badge: 'New Arrival ✨',
+            displayOrder: 2,
+            isActive: true,
+          }
         ],
       });
     }

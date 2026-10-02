@@ -21,7 +21,7 @@ const DEFAULT_BANNER: Banner = {
   id: 1,
   title: 'Elegance in Every Thread',
   subtitle: 'Ladies Fashion & Fabrics',
-  imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=85',
+  imageUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1200&q=85',
   ctaText: 'WhatsApp Par Order Karein',
   ctaLink: 'https://wa.me/919783770735',
   isActive: true,
@@ -29,7 +29,7 @@ const DEFAULT_BANNER: Banner = {
 };
 
 const FALLBACK_HERO_IMAGE =
-  'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1200&q=85';
+  'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1200&q=85';
 
 export const HeroSlider: React.FC<HeroSliderProps> = ({
   banners = [],

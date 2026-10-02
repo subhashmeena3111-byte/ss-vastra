@@ -208,7 +208,7 @@ function createInitialData(): LocalStoreData {
       slug: 'kurta-sets',
       name: 'Kurta Sets',
       icon: '👗',
-      image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80',
+      image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=600&q=80',
       description: 'Graceful embroidered and printed ethnic kurta sets with bottoms & dupattas.',
       displayOrder: 1,
     },
@@ -306,7 +306,7 @@ function createInitialData(): LocalStoreData {
       id: 1,
       title: 'Elegance in Every Thread',
       subtitle: 'Ladies Fashion & Fabrics',
-      imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1600&q=85',
+      imageUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1600&q=85',
       ctaText: 'Explore Collections',
       ctaLink: '#products-section',
       isActive: true,
@@ -587,10 +587,10 @@ class LocalStoreManager {
         prods = getDefaultLocalProducts();
       }
 
-      // Mark demo products correctly (IDs <= 8 or isDemo === true)
+      // Mark demo products correctly
       prods = prods.map((p: any) => ({
         ...p,
-        isDemo: p.isDemo !== undefined ? Boolean(p.isDemo) : (typeof p.id === 'number' && p.id <= 8),
+        isDemo: Boolean(p.isDemo),
       }));
 
       parsed.products = prods;
@@ -693,7 +693,7 @@ class LocalStoreManager {
   }
 
   purgeDemoData(): { removedProducts: number; removedOrders: number } {
-    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true;
     const demoProds = this.data.products.filter(isDemoItem);
     const countProds = demoProds.length;
 
@@ -763,7 +763,7 @@ class LocalStoreManager {
 
   getDataStatus() {
     const mode = this.getDataMode();
-    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true;
     const totalProducts = this.data.products.length;
     const demoProducts = this.data.products.filter(isDemoItem).length;
     const liveProducts = totalProducts - demoProducts;
@@ -794,7 +794,7 @@ class LocalStoreManager {
     let list = this.data.products.filter((p) => p.isActive);
 
     const mode = filters?.mode || this.getDataMode();
-    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true;
     if (mode === 'live') {
       list = list.filter((p) => !isDemoItem(p));
     } else if (mode === 'demo') {
@@ -831,7 +831,7 @@ class LocalStoreManager {
   }
 
   getAllProductsAdmin(modeFilter?: 'all' | 'live' | 'demo'): LocalProduct[] {
-    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true;
     let list = this.data.products;
     if (modeFilter === 'live') {
       list = list.filter((p) => !isDemoItem(p));

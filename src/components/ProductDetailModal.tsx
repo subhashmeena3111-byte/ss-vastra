@@ -179,7 +179,7 @@ export const ProductDetailModal: React.FC<ProductDetailModalProps> = ({
                   if (target.src !== fallback && !target.src.includes('drive.google.com/thumbnail')) {
                     target.src = fallback;
                   } else {
-                    target.src = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
+                    target.src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
                   }
                 }}
               />

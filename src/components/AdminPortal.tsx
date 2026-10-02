@@ -1451,6 +1451,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         setShowReelModal(false);
         setEditingReel(null);
         loadReelsData();
+        window.dispatchEvent(new CustomEvent('ss-vastra-reels-updated'));
       } else {
         alert(data.error || 'Failed to save reel');
       }
@@ -1473,6 +1474,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         setActionMessage('Reel successfully removed');
         setTimeout(() => setActionMessage(null), 3000);
         loadReelsData();
+        window.dispatchEvent(new CustomEvent('ss-vastra-reels-updated'));
       }
     } catch {
       alert('Failed to delete reel');
@@ -4103,7 +4105,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                       </div>
 
                       {/* Demo Data Quick Notice & Manager Banner */}
-                      {productsList.some((p) => p.isDemo || p.id <= 8) && (
+                      {productsList.some((p) => Boolean(p.isDemo)) && (
                         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-2xs">
                           <div className="flex items-center gap-2.5">
                             <div className="w-8 h-8 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center shrink-0">
@@ -4112,7 +4114,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             <div>
                               <div className="flex items-center gap-2">
                                 <span className="text-xs font-bold text-amber-900">
-                                  Demo Data Active ({productsList.filter((p) => p.isDemo || p.id <= 8).length} Sample Outfits)
+                                  Demo Data Active ({productsList.filter((p) => Boolean(p.isDemo)).length} Sample Outfits)
                                 </span>
                                 <span className="bg-amber-200 text-amber-900 text-[10px] font-bold px-2 py-0.5 rounded-full">
                                   Samples
@@ -4166,9 +4168,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                                 }}
                               />
                               <span className={`absolute top-2 left-2 px-2 py-0.5 rounded-full text-[9px] font-bold shadow-xs ${
-                                p.isDemo || p.id <= 8 ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                Boolean(p.isDemo) ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-emerald-100 text-emerald-800 border border-emerald-300'
                               }`}>
-                                {p.isDemo || p.id <= 8 ? '🟡 DEMO' : '🟢 LIVE'}
+                                {Boolean(p.isDemo) ? '🟡 DEMO' : '🟢 LIVE'}
                               </span>
                               <span className="absolute top-2 right-2 px-2 py-0.5 rounded-full bg-white/90 text-stone-800 text-[10px] font-bold shadow-xs">
                                 {p.category}

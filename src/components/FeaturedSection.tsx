@@ -46,50 +46,83 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E9A9BB]/40 shadow-xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
           {/* Visual Gallery Grid (7 cols) */}
-          <div className="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {/* Main Big Photo */}
-            <div className="sm:col-span-2 aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 shadow-md group relative">
-              <img
-                src={normalizeProductImageUrl(featuredProduct.image)}
-                alt={featuredProduct.name}
-                className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
-                onError={(e) => {
-                  const target = e.currentTarget;
-                  const fallback = getDriveThumbnailUrl(featuredProduct.image);
-                  if (target.src !== fallback) {
-                    target.src = fallback;
-                  }
-                }}
-              />
-              <span className="absolute top-3 left-3 bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
-                36% OFF Limited Festive
-              </span>
-            </div>
+          <div className="lg:col-span-7">
+            {featuredProduct.gallery && featuredProduct.gallery.length >= 2 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Main Big Photo */}
+                <div className="sm:col-span-2 aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 shadow-md group relative">
+                  <img
+                    src={normalizeProductImageUrl(featuredProduct.image)}
+                    alt={featuredProduct.name}
+                    className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                    onError={(e) => {
+                      const target = e.currentTarget;
+                      const fallback = getDriveThumbnailUrl(featuredProduct.image);
+                      if (target.src !== fallback) {
+                        target.src = fallback;
+                      }
+                    }}
+                  />
+                  <span className="absolute top-3 left-3 bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+                    {featuredProduct.discountPercent || 30}% OFF Limited Festive
+                  </span>
+                </div>
 
-            {/* Detail Close-up Shots */}
-            <div className="flex flex-row sm:flex-col gap-3">
-              <div className="flex-1 aspect-[4/5] rounded-xl overflow-hidden bg-stone-100 shadow-xs relative group">
+                {/* Real Product Detail Shots */}
+                <div className="flex flex-row sm:flex-col gap-3">
+                  <div className="flex-1 aspect-[4/5] rounded-xl overflow-hidden bg-stone-100 shadow-xs relative group">
+                    <img
+                      src={normalizeProductImageUrl(featuredProduct.gallery[0])}
+                      alt={`${featuredProduct.name} detail view 1`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const fallback = getDriveThumbnailUrl(featuredProduct.gallery![0]);
+                        if (target.src !== fallback) target.src = fallback;
+                      }}
+                    />
+                    <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
+                      Detail View
+                    </span>
+                  </div>
+
+                  <div className="flex-1 aspect-[4/5] rounded-xl overflow-hidden bg-stone-100 shadow-xs relative group">
+                    <img
+                      src={normalizeProductImageUrl(featuredProduct.gallery[1])}
+                      alt={`${featuredProduct.name} detail view 2`}
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      onError={(e) => {
+                        const target = e.currentTarget;
+                        const fallback = getDriveThumbnailUrl(featuredProduct.gallery![1]);
+                        if (target.src !== fallback) target.src = fallback;
+                      }}
+                    />
+                    <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
+                      Drape View
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Clean Single Showcase without any fake demo stock pictures */
+              <div className="max-w-md mx-auto aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 shadow-md group relative">
                 <img
-                  src="https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=500&q=80"
-                  alt="Fabric and gotapatti close up"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  src={normalizeProductImageUrl(featuredProduct.image)}
+                  alt={featuredProduct.name}
+                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105"
+                  onError={(e) => {
+                    const target = e.currentTarget;
+                    const fallback = getDriveThumbnailUrl(featuredProduct.image);
+                    if (target.src !== fallback) {
+                      target.src = fallback;
+                    }
+                  }}
                 />
-                <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
-                  Yoke Embroidery
+                <span className="absolute top-3 left-3 bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+                  {featuredProduct.discountPercent || 30}% OFF Limited Festive
                 </span>
               </div>
-
-              <div className="flex-1 aspect-[4/5] rounded-xl overflow-hidden bg-stone-100 shadow-xs relative group">
-                <img
-                  src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=500&q=80"
-                  alt="Dupatta border detail"
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                />
-                <span className="absolute bottom-2 left-2 bg-black/60 text-white text-[10px] px-2 py-0.5 rounded backdrop-blur-xs">
-                  Organza Fall
-                </span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Details & Action Info (5 cols) */}

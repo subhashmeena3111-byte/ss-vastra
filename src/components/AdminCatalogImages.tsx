@@ -69,7 +69,7 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       id: 1,
       title: 'Elegance in Every Thread',
       subtitle: 'Ladies Fashion & Fabrics • Sanganer, Jaipur',
-      imageUrl: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=1000&q=85',
+      imageUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=1000&q=85',
       ctaText: 'WhatsApp Par Order Karein',
       ctaLink: 'https://wa.me/919783770735',
       isActive: true,
@@ -116,7 +116,7 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       id: 3,
       slug: 'anarkali-dresses',
       name: 'Anarkali & Dresses',
-      image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80',
+      image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=300&q=80',
     },
     {
       id: 4,

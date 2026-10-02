@@ -282,7 +282,7 @@ export const MyOrdersModal: React.FC<MyOrdersModalProps> = ({
                   {ord.items && ord.items.map((item) => (
                     <div key={item.id} className="py-2.5 flex items-center gap-3">
                       <img
-                        src={normalizeProductImageUrl(item.productImage || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=150&q=80')}
+                        src={normalizeProductImageUrl(item.productImage || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=150&q=80')}
                         alt={item.productName}
                         className="w-14 h-16 object-cover rounded-lg border border-stone-200 shrink-0"
                         onError={(e) => {

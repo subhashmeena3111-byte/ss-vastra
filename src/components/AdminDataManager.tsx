@@ -40,8 +40,8 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
   const [status, setStatus] = useState<DataStatus>({
     mode: 'all',
     totalProducts: products.length,
-    demoProducts: products.filter((p) => p.isDemo || p.id <= 8).length,
-    liveProducts: products.filter((p) => !(p.isDemo || p.id <= 8)).length,
+    demoProducts: products.filter((p) => Boolean(p.isDemo)).length,
+    liveProducts: products.filter((p) => !p.isDemo).length,
     totalOrders: 0,
     demoOrders: 0,
     liveOrders: 0,
@@ -93,8 +93,8 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
     setStatus((prev) => ({
       ...prev,
       totalProducts: products.length,
-      demoProducts: products.filter((p) => p.isDemo || p.id <= 8).length,
-      liveProducts: products.filter((p) => !(p.isDemo || p.id <= 8)).length,
+      demoProducts: products.filter((p) => Boolean(p.isDemo)).length,
+      liveProducts: products.filter((p) => !p.isDemo).length,
     }));
   }, [products]);
 
@@ -252,7 +252,7 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
   };
 
   const displayedProducts = products.filter((p) => {
-    const isDemo = p.isDemo || p.id <= 8;
+    const isDemo = Boolean(p.isDemo);
     if (filterTab === 'live') return !isDemo;
     if (filterTab === 'demo') return isDemo;
     return true;
@@ -338,7 +338,7 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-emerald-600">
-              {products.filter((p) => !(p.isDemo || p.id <= 8)).length}
+              {products.filter((p) => !p.isDemo).length}
             </span>
             <span className="text-xs text-emerald-700 font-medium">real products</span>
           </div>
@@ -350,7 +350,7 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-2xl font-bold text-amber-600">
-              {products.filter((p) => p.isDemo || p.id <= 8).length}
+              {products.filter((p) => Boolean(p.isDemo)).length}
             </span>
             <span className="text-xs text-amber-700 font-medium">samples</span>
           </div>
@@ -583,7 +583,7 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              Live Real ({products.filter((p) => !(p.isDemo || p.id <= 8)).length})
+              Live Real ({products.filter((p) => !p.isDemo).length})
             </button>
             <button
               type="button"
@@ -594,7 +594,7 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
                   : 'text-stone-600 hover:text-stone-900'
               }`}
             >
-              Demo Samples ({products.filter((p) => p.isDemo || p.id <= 8).length})
+              Demo Samples ({products.filter((p) => Boolean(p.isDemo)).length})
             </button>
           </div>
         </div>
@@ -629,7 +629,7 @@ export const AdminDataManager: React.FC<AdminDataManagerProps> = ({
               </thead>
               <tbody className="divide-y divide-stone-100">
                 {displayedProducts.map((p) => {
-                  const isDemo = p.isDemo || p.id <= 8;
+                  const isDemo = Boolean(p.isDemo);
                   const img = normalizeProductImageUrl(p.image);
                   return (
                     <tr key={p.id} className="hover:bg-amber-50/20 transition-colors">

@@ -18,7 +18,7 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
     slug: 'all',
     name: 'All Products',
     icon: '✨',
-    image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=300&q=80',
   };
 
   const list = [allOption, ...categories];

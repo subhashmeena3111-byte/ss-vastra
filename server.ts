@@ -321,7 +321,7 @@ app.post('/api/coupons/validate', async (req: Request, res: Response) => {
 // Safe Image Proxy for external images, Google Drive links, and fallbacks
 app.get('/api/image-proxy', async (req: Request, res: Response) => {
   const url = req.query.url as string;
-  const FALLBACK = 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
+  const FALLBACK = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
   if (!url) return res.redirect(FALLBACK);
 
   try {
@@ -403,7 +403,7 @@ app.get('/api/uploads/:file', async (req: Request, res: Response) => {
     console.warn('Firestore image retrieve note:', err);
   }
 
-  return res.redirect('https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80');
+  return res.redirect('https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80');
 });
 
 // Standalone Local & Cloud Image & Video Upload (Permanent, Zero-Loss for Vercel & Local)
@@ -474,7 +474,7 @@ app.post('/api/upload', async (req: Request, res: Response) => {
     return res.json({ success: true, url: mediaPayload });
   } catch (err: any) {
     console.error('Upload error handled safely:', err);
-    const fallbackUrl = req.body?.image || req.body?.video || req.body?.file || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
+    const fallbackUrl = req.body?.image || req.body?.video || req.body?.file || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80';
     res.json({ success: true, url: fallbackUrl });
   }
 });
@@ -547,7 +547,7 @@ app.post('/api/orders/create', async (req: Request, res: Response) => {
         verifiedItems.push({
           productId: Number(item.productId) || Math.floor(1000 + Math.random() * 9000),
           productName: item.productName || item.name || 'Ethnic Wear Item',
-          productImage: item.productImage || item.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=400&q=80',
+          productImage: item.productImage || item.image || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=400&q=80',
           size: item.size || 'Free Size',
           quantity: qty,
           unitPrice: price,
@@ -3911,6 +3911,8 @@ app.post(
         { title, videoUrl }
       );
 
+      await pushAllToCloud();
+
       res.json({ success: true, reel: newReel, message: 'Video reel created successfully' });
     } catch (err) {
       console.error('Create reel error:', err);
@@ -3940,6 +3942,8 @@ app.put(
         updates
       );
 
+      await pushAllToCloud();
+
       res.json({ success: true, reel: updated, message: 'Video reel updated successfully' });
     } catch (err) {
       console.error('Update reel error:', err);
@@ -3967,6 +3971,8 @@ app.delete(
         String(id),
         {}
       );
+
+      await pushAllToCloud();
 
       res.json({ success: true, message: 'Video reel deleted successfully' });
     } catch (err) {

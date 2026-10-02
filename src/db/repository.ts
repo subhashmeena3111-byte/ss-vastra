@@ -113,7 +113,7 @@ export function formatProductRecord(p: any, galleryImages?: string[]) {
     ? p.gallery
     : Array.isArray(p.images) && p.images.length > 0
     ? p.images
-    : [p.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80'];
+    : [p.image || 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=800&q=80'];
 
   return {
     ...p,

@@ -11,7 +11,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { localStore } from './localStore.ts';
-import type { LocalProduct, LocalCategory, LocalBanner, LocalCoupon, LocalOrder } from './localStore.ts';
+import type { LocalProduct, LocalCategory, LocalBanner, LocalCoupon, LocalOrder, LocalVideoReel } from './localStore.ts';
 
 let dbInstance: Firestore | null = null;
 let isInitialized = false;
@@ -62,6 +62,7 @@ export interface CloudStorePayload {
   coupons: LocalCoupon[];
   orders: LocalOrder[];
   settings: Record<string, string>;
+  videoReels?: LocalVideoReel[];
   lastUpdated: number;
 }
 
@@ -107,6 +108,9 @@ export async function syncWithCloud(force = false): Promise<void> {
         if (cloudData.settings && Object.keys(cloudData.settings).length > 0) {
           (localStore as any).data.settings = cloudData.settings;
         }
+        if (Array.isArray(cloudData.videoReels) && cloudData.videoReels.length > 0) {
+          (localStore as any).data.videoReels = cloudData.videoReels;
+        }
 
         localStore.saveData();
       }
@@ -142,6 +146,7 @@ export async function pushAllToCloud(): Promise<boolean> {
     const coupons = localStore.getAllCoupons();
     const orders = localStore.getAllOrders();
     const settings = localStore.getAllSettings();
+    const videoReels = localStore.getVideoReels();
 
     // Safeguard image payloads: extract large dataUrls into uploaded_images collection
     const cleanProds = await Promise.all(
@@ -204,6 +209,7 @@ export async function pushAllToCloud(): Promise<boolean> {
       coupons,
       orders,
       settings,
+      videoReels,
       lastUpdated: Date.now(),
     };
 

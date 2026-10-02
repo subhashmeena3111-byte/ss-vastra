@@ -85,12 +85,13 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
     },
   ];
 
-  useEffect(() => {
+  const fetchReels = () => {
     fetch('/api/reels')
       .then((res) => res.json())
       .then((data) => {
         if (data.success && Array.isArray(data.reels) && data.reels.length > 0) {
-          setReels(data.reels.filter((r: VideoReel) => r.isActive !== false));
+          const activeReels = data.reels.filter((r: VideoReel) => r.isActive !== false);
+          setReels(activeReels.length > 0 ? activeReels : defaultReels);
         } else {
           setReels(defaultReels);
         }
@@ -101,6 +102,19 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
       .finally(() => {
         setIsLoading(false);
       });
+  };
+
+  useEffect(() => {
+    fetchReels();
+
+    const handleReelsUpdated = () => {
+      fetchReels();
+    };
+
+    window.addEventListener('ss-vastra-reels-updated', handleReelsUpdated);
+    return () => {
+      window.removeEventListener('ss-vastra-reels-updated', handleReelsUpdated);
+    };
   }, []);
 
   const handleScroll = (direction: 'left' | 'right') => {
@@ -169,7 +183,7 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
     }
   };
 
-  if (!isLoading && reels.length === 0) return null;
+  const displayReels = reels.length > 0 ? reels : defaultReels;
 
   return (
     <section className="py-12 sm:py-16 bg-gradient-to-b from-[#FAF5EE] via-white to-[#FBF7F0] border-y border-[#E9A9BB]/30 relative overflow-hidden">
@@ -239,7 +253,7 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
           className="flex items-stretch gap-4 sm:gap-6 overflow-x-auto pb-4 pt-1 snap-x snap-mandatory scrollbar-none"
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {reels.map((reel) => {
+          {displayReels.map((reel) => {
             const isPlaying = activeReelId === reel.id;
 
             return (
