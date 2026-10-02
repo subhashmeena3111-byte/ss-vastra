@@ -4090,7 +4090,16 @@ async function startServer() {
 }
 
 // Start server in persistent Node/Express environments
-if (!process.env.VERCEL) {
+const isServerless = Boolean(
+  process.env.VERCEL ||
+  process.env.VERCEL_ENV ||
+  process.env.NOW_REGION ||
+  process.env.AWS_REGION ||
+  process.env.LAMBDA_TASK_ROOT ||
+  process.env.NODE_ENV === 'test'
+);
+
+if (!isServerless) {
   startServer().catch((err) => {
     console.error('Failed to start server:', err);
   });
