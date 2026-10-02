@@ -2,7 +2,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { Package, Plus } from 'lucide-react';
 import { Navbar } from './components/Navbar.tsx';
 import { HeroSlider } from './components/HeroSlider.tsx';
-import { CategoryRow } from './components/CategoryRow.tsx';
 import { ProductCard } from './components/ProductCard.tsx';
 import { ProductDetailModal } from './components/ProductDetailModal.tsx';
 import { CartDrawer } from './components/CartDrawer.tsx';
@@ -23,7 +22,6 @@ import { DeepLinkModal } from './components/DeepLinkModal.tsx';
 import { WishlistDrawer } from './components/WishlistDrawer.tsx';
 import { QuickEditProductModal } from './components/QuickEditProductModal.tsx';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal.tsx';
-import { VideoReelsSection } from './components/VideoReelsSection.tsx';
 import { Product, Category, CartItem, Banner } from './types.ts';
 import { sanitizeProductList } from './utils/productUtils.ts';
 import { getDefaultProducts } from './data/defaultProducts.ts';
@@ -845,25 +843,7 @@ export function App() {
         }}
       />
 
-      {/* 3. Round Category Icons Row */}
-      <CategoryRow
-        categories={categories}
-        selectedCategory={selectedCategory}
-        onSelectCategory={(catName) => {
-          setSelectedCategory(catName);
-          setActiveTab('all');
-          document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' });
-        }}
-      />
-
-      {/* 3.5. 9:16 Portrait Video Reels Section (Watch, Love & Shop) */}
-      <VideoReelsSection
-        products={products}
-        onSelectProduct={(product) => handleOpenProductDetail(product)}
-        onOpenQuickBuy={(product) => handleInstantBuy(product, 'M', 1)}
-      />
-
-      {/* 4. Main Product Catalog Section with 2-Column Mobile Grid */}
+      {/* Main Product Catalog Section with 2-Column Mobile Grid */}
       <section id="catalog-section" className="py-10 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
