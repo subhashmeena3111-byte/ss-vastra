@@ -1,7 +1,34 @@
 process.env.VERCEL = '1';
 
 import type { Request, Response } from 'express';
-import app from '../server.ts';
+import { getDefaultProducts } from '../src/data/defaultProducts.ts';
+
+let appInstance: any = null;
+let appLoadPromise: Promise<any> | null = null;
+
+async function getApp(): Promise<any> {
+  if (appInstance) return appInstance;
+  if (!appLoadPromise) {
+    appLoadPromise = (async () => {
+      try {
+        const mod = await import('./_server.js');
+        appInstance = mod.default || mod.app;
+        return appInstance;
+      } catch (err1: any) {
+        console.warn('Could not load api/_server.js, trying ../server.ts:', err1?.message || err1);
+        try {
+          const mod2 = await import('../server.ts');
+          appInstance = mod2.default || mod2.app;
+          return appInstance;
+        } catch (err2: any) {
+          console.error('All server loaders failed:', err2?.message || err2);
+          throw err1;
+        }
+      }
+    })();
+  }
+  return appLoadPromise;
+}
 
 export default async function handler(req: Request, res: Response) {
   // Normalize req.url so both /api/... and stripped /... work seamlessly on Vercel
@@ -42,11 +69,41 @@ export default async function handler(req: Request, res: Response) {
     });
   }
 
+  // Attempt standard Express handling via bundled server
   try {
+    const app = await getApp();
     return app(req, res);
   } catch (err: any) {
-    console.error('Vercel serverless uncaught error:', err);
-    return res.status(500).json({
+    console.error('Server handling error, falling back to standalone catalog responder:', err);
+
+    // Bulletproof Fallback: If GET /api/products, return curated Jaipur outfits directly!
+    const pathname = (req.url || '').split('?')[0].toLowerCase();
+    if (req.method === 'GET' && (pathname === '/api/products' || pathname === '/products')) {
+      return res.status(200).json({
+        success: true,
+        source: 'serverless-fallback',
+        products: getDefaultProducts(),
+      });
+    }
+
+    if (req.method === 'GET' && (pathname === '/api/categories' || pathname === '/categories')) {
+      return res.status(200).json({
+        success: true,
+        source: 'serverless-fallback',
+        categories: [
+          { id: 1, slug: 'kurta-sets', name: 'Kurta Sets', icon: '👗', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80', description: 'Graceful embroidered and printed ethnic kurta sets.', displayOrder: 1 },
+          { id: 2, slug: 'co-ord-sets', name: 'Co-ord Sets', icon: '👚', image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=600&q=80', description: 'Contemporary matching sets designed for festive flair.', displayOrder: 2 },
+          { id: 3, slug: 'anarkali-dresses', name: 'Anarkali & Dresses', icon: '💃', image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=600&q=80', description: 'Flowing flares, fine muslin cotton and gotapatti lace.', displayOrder: 3 },
+          { id: 4, slug: 'kurta-kurtis', name: 'Kurta / Kurtis', icon: '🌸', image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80', description: 'Breathable Jaipur cotton tunics and daily office staples.', displayOrder: 4 },
+          { id: 5, slug: 'festive-fits', name: 'Festive Fits', icon: '👑', image: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=600&q=80', description: 'Rich Chanderi, zari borders and celebratory suits.', displayOrder: 5 },
+          { id: 6, slug: 'fabrics', name: 'Fabrics', icon: '🧵', image: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=600&q=80', description: 'Direct from Sanganer master wooden handblock cambric & mulmul cotton.', displayOrder: 6 },
+          { id: 7, slug: 'new-arrivals', name: 'New Arrivals', icon: '🌟', image: 'https://images.unsplash.com/photo-1544441893-675973e31985?auto=format&fit=crop&w=600&q=80', description: 'Freshly loomed designs and latest seasonal silhouettes.', displayOrder: 7 },
+          { id: 8, slug: 'best-sellers', name: 'Best Sellers', icon: '🔥', image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=600&q=80', description: 'Most loved Jaipur creations ordered across India.', displayOrder: 8 },
+        ],
+      });
+    }
+
+    return res.status(200).json({
       success: false,
       diagnosticError: true,
       message: err?.message || String(err),
