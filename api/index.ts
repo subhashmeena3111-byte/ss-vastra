@@ -1,23 +1,7 @@
 process.env.VERCEL = '1';
 
 import type { Request, Response } from 'express';
-
-let appInstance: any = null;
-let appLoadError: any = null;
-
-async function getApp() {
-  if (appInstance) return appInstance;
-  if (appLoadError) throw appLoadError;
-  try {
-    process.env.VERCEL = '1';
-    const serverMod = await import('../server.ts');
-    appInstance = serverMod.default || serverMod.app;
-    return appInstance;
-  } catch (err) {
-    appLoadError = err;
-    throw err;
-  }
-}
+import app from '../server.ts';
 
 export default async function handler(req: Request, res: Response) {
   // Normalize req.url so both /api/... and stripped /... work seamlessly on Vercel
@@ -47,7 +31,7 @@ export default async function handler(req: Request, res: Response) {
     return res.status(200).end();
   }
 
-  // Quick health response without loading heavy server bundle
+  // Quick health response
   if (req.url === '/api' || req.url === '/api/' || req.url === '/api/health') {
     return res.status(200).json({
       success: true,
@@ -59,11 +43,10 @@ export default async function handler(req: Request, res: Response) {
   }
 
   try {
-    const app = await getApp();
     return app(req, res);
   } catch (err: any) {
-    console.error('Vercel serverless load error:', err);
-    return res.status(200).json({
+    console.error('Vercel serverless uncaught error:', err);
+    return res.status(500).json({
       success: false,
       diagnosticError: true,
       message: err?.message || String(err),

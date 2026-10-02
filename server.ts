@@ -4099,7 +4099,14 @@ const isServerless = Boolean(
   process.env.NODE_ENV === 'test'
 );
 
-if (!isServerless) {
+const isDirectRun = Boolean(
+  process.argv[1] && (
+    process.argv[1].endsWith('server.ts') ||
+    process.argv[1].endsWith('server.js')
+  )
+);
+
+if (isDirectRun && !isServerless) {
   startServer().catch((err) => {
     console.error('Failed to start server:', err);
   });
