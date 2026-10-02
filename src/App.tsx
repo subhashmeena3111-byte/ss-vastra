@@ -335,7 +335,7 @@ export function App() {
       try {
         localStorage.removeItem('ss_vastra_custom_products');
         const deletedIds: number[] = [];
-        for (let i = 1; i <= 20; i++) deletedIds.push(i);
+        for (let i = 1; i <= 8; i++) deletedIds.push(i);
         localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(deletedIds));
       } catch {}
 
@@ -644,8 +644,8 @@ export function App() {
         localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
       );
 
-      // Fallback to curated outfits if server returned empty and catalog was not purged
-      if (list.length === 0 && !deletedIds.includes(1)) {
+      // Fallback to boutique outfits if server returned empty
+      if (list.length === 0) {
         list = getDefaultProducts();
       }
 

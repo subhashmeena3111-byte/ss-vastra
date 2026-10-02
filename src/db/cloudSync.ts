@@ -84,12 +84,31 @@ export async function syncWithCloud(force = false): Promise<void> {
 
     if (snap.exists()) {
       const cloudData = snap.data() as CloudStorePayload;
-      if (Array.isArray(cloudData.products)) {
-        const deletedIds: number[] = Array.isArray(cloudData.deletedProductIds)
-          ? cloudData.deletedProductIds
-          : [];
-        const validProds = cloudData.products.filter((p) => !deletedIds.includes(p.id));
+      
+      // Permanent demo cleanup: IDs 1-8 are demo and must be permanently excluded
+      const permanentDemoIds = [1, 2, 3, 4, 5, 6, 7, 8];
+      let deletedIds: number[] = Array.isArray(cloudData.deletedProductIds)
+        ? cloudData.deletedProductIds.filter((id) => id <= 8 || id > 12)
+        : [];
+      permanentDemoIds.forEach((id) => {
+        if (!deletedIds.includes(id)) deletedIds.push(id);
+      });
 
+      let validProds: LocalProduct[] = [];
+      if (Array.isArray(cloudData.products)) {
+        validProds = cloudData.products.filter(
+          (p) => p && p.id > 8 && !p.isDemo && !deletedIds.includes(p.id)
+        );
+      }
+
+      // If cloud has zero valid products, populate with local store products and update cloud!
+      if (validProds.length === 0) {
+        validProds = localStore.getAllProducts().filter((p) => p.id > 8 && !p.isDemo);
+        (localStore as any).data.products = validProds;
+        (localStore as any).data.deletedProductIds = deletedIds;
+        localStore.saveData();
+        await pushAllToCloud();
+      } else {
         (localStore as any).data.products = validProds;
         (localStore as any).data.deletedProductIds = deletedIds;
 
@@ -103,7 +122,9 @@ export async function syncWithCloud(force = false): Promise<void> {
           (localStore as any).data.coupons = cloudData.coupons;
         }
         if (Array.isArray(cloudData.orders)) {
-          (localStore as any).data.orders = cloudData.orders;
+          (localStore as any).data.orders = cloudData.orders.filter(
+            (o) => !o.isDemo && !o.orderNumber?.startsWith('SSV-DEMO')
+          );
         }
         if (cloudData.settings && Object.keys(cloudData.settings).length > 0) {
           (localStore as any).data.settings = cloudData.settings;

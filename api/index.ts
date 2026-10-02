@@ -111,32 +111,7 @@ export default async function handler(req: Request, res: Response) {
       return res.status(200).json({
         success: true,
         source: 'serverless-reels',
-        reels: [
-          {
-            id: 1,
-            title: 'Royal Anarkali Handblock Drape',
-            videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-an-orange-dress-41130-large.mp4',
-            posterUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
-            productTitle: 'Pure Cambric Cotton Jaipuri Anarkali Suit',
-            productPrice: 2499,
-            productImage: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
-            badge: 'Trending 🔥',
-            displayOrder: 1,
-            isActive: true,
-          },
-          {
-            id: 2,
-            title: 'Jaipur Handcrafted Farshi Suit Fit',
-            videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-posing-in-a-white-dress-and-a-hat-41133-large.mp4',
-            posterUrl: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
-            productTitle: 'Blush Pink Cotton Farshi Suit Set',
-            productPrice: 1850,
-            productImage: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=800',
-            badge: 'New Arrival ✨',
-            displayOrder: 2,
-            isActive: true,
-          }
-        ],
+        reels: [],
       });
     }
 

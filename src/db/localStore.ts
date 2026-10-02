@@ -568,34 +568,41 @@ class LocalStoreManager {
 
   private loadData(): LocalStoreData {
     const sanitizeLoaded = (parsed: any): LocalStoreData => {
-      const deletedIds: number[] = Array.isArray(parsed.deletedProductIds) ? parsed.deletedProductIds : [];
+      const permanentDemoIds = [1, 2, 3, 4, 5, 6, 7, 8];
+      let deletedIds: number[] = Array.isArray(parsed.deletedProductIds)
+        ? parsed.deletedProductIds.filter((id: number) => id <= 8 || id > 12)
+        : [];
+      permanentDemoIds.forEach((id) => {
+        if (!deletedIds.includes(id)) deletedIds.push(id);
+      });
+
       const customProds: LocalProduct[] = Array.isArray(parsed.customProducts) ? parsed.customProducts : [];
       let prods: LocalProduct[] = Array.isArray(parsed.products) ? parsed.products : [];
 
-      // Filter out explicitly deleted products
-      prods = prods.filter((p: LocalProduct) => !deletedIds.includes(p.id));
+      // Filter out demo products (id <= 8 or isDemo) and explicitly deleted products
+      prods = prods.filter((p: LocalProduct) => !deletedIds.includes(p.id) && !p.isDemo && p.id > 8);
 
       // Ensure custom products are preserved
       for (const cp of customProds) {
-        if (!deletedIds.includes(cp.id) && !prods.some((p) => p.id === cp.id)) {
+        if (!deletedIds.includes(cp.id) && !cp.isDemo && cp.id > 8 && !prods.some((p) => p.id === cp.id)) {
           prods.unshift(cp);
         }
       }
 
-      // Auto-seed curated Jaipur outfits if catalog is empty and not explicitly purged
-      if (prods.length === 0 && customProds.length === 0 && !deletedIds.includes(1)) {
+      // Auto-seed boutique outfits if catalog is empty
+      if (prods.length === 0) {
         prods = getDefaultLocalProducts();
       }
 
       // Mark demo products correctly
       prods = prods.map((p: any) => ({
         ...p,
-        isDemo: Boolean(p.isDemo),
+        isDemo: false,
       }));
 
       parsed.products = prods;
       parsed.deletedProductIds = deletedIds;
-      parsed.customProducts = customProds.filter((cp) => !deletedIds.includes(cp.id));
+      parsed.customProducts = customProds.filter((cp) => !deletedIds.includes(cp.id) && cp.id > 8);
       if (!Array.isArray(parsed.visitorLogs)) parsed.visitorLogs = [];
       if (!Array.isArray(parsed.customerActivities)) parsed.customerActivities = [];
       if (!Array.isArray(parsed.orders)) parsed.orders = [];
@@ -693,7 +700,7 @@ class LocalStoreManager {
   }
 
   purgeDemoData(): { removedProducts: number; removedOrders: number } {
-    const isDemoItem = (p: LocalProduct) => p.isDemo === true;
+    const isDemoItem = (p: LocalProduct) => p.isDemo === true || p.id <= 8;
     const demoProds = this.data.products.filter(isDemoItem);
     const countProds = demoProds.length;
 
@@ -702,14 +709,18 @@ class LocalStoreManager {
       this.data.customProducts = this.data.customProducts.filter((p) => !isDemoItem(p));
     }
     const deletedIds = this.data.deletedProductIds || [];
-    demoProds.forEach((p) => {
-      if (!deletedIds.includes(p.id)) deletedIds.push(p.id);
-    });
+    for (let id = 1; id <= 8; id++) {
+      if (!deletedIds.includes(id)) deletedIds.push(id);
+    }
     this.data.deletedProductIds = deletedIds;
 
     const demoOrders = (this.data.orders || []).filter((o) => o.isDemo === true || o.orderNumber.startsWith('SSV-DEMO'));
     const countOrders = demoOrders.length;
     this.data.orders = (this.data.orders || []).filter((o) => !(o.isDemo === true || o.orderNumber.startsWith('SSV-DEMO')));
+
+    if (this.data.products.length === 0) {
+      this.data.products = getDefaultLocalProducts();
+    }
 
     this.saveData();
     return {
@@ -739,25 +750,12 @@ class LocalStoreManager {
   }
 
   restoreDemoData(): { restoredProducts: number } {
-    const initial = createInitialData();
-    const demoProds = initial.products.map((p) => ({ ...p, isDemo: true }));
-
-    if (this.data.deletedProductIds) {
-      this.data.deletedProductIds = this.data.deletedProductIds.filter((id) => id > 8);
-    }
-
-    for (const dp of demoProds) {
-      const idx = this.data.products.findIndex((p) => p.id === dp.id);
-      if (idx >= 0) {
-        this.data.products[idx] = dp;
-      } else {
-        this.data.products.push(dp);
-      }
-    }
+    const defaultProds = getDefaultLocalProducts();
+    this.data.products = defaultProds;
 
     this.saveData();
     return {
-      restoredProducts: demoProds.length,
+      restoredProducts: defaultProds.length,
     };
   }
 

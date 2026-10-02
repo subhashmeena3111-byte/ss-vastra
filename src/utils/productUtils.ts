@@ -148,5 +148,7 @@ export function sanitizeProduct(p: any): Product {
 
 export function sanitizeProductList(list: any[]): Product[] {
   if (!Array.isArray(list)) return [];
-  return list.map(sanitizeProduct).filter((p) => p.isActive);
+  return list
+    .map(sanitizeProduct)
+    .filter((p) => p.isActive && !p.isDemo && p.id > 8);
 }
