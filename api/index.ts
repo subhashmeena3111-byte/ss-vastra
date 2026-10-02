@@ -1,7 +1,17 @@
 process.env.VERCEL = '1';
 
 import type { Request, Response } from 'express';
-import { getDefaultProducts } from '../src/data/defaultProducts.ts';
+import fs from 'fs';
+
+function loadFallbackProducts() {
+  try {
+    const filePath = new URL('./defaultProducts.json', import.meta.url);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    return JSON.parse(content);
+  } catch (e) {
+    return [];
+  }
+}
 
 let appInstance: any = null;
 let appLoadPromise: Promise<any> | null = null;
@@ -15,15 +25,8 @@ async function getApp(): Promise<any> {
         appInstance = mod.default || mod.app;
         return appInstance;
       } catch (err1: any) {
-        console.warn('Could not load api/_server.js, trying ../server.ts:', err1?.message || err1);
-        try {
-          const mod2 = await import('../server.ts');
-          appInstance = mod2.default || mod2.app;
-          return appInstance;
-        } catch (err2: any) {
-          console.error('All server loaders failed:', err2?.message || err2);
-          throw err1;
-        }
+        console.warn('Could not load api/_server.js:', err1?.message || err1);
+        throw err1;
       }
     })();
   }
@@ -74,22 +77,23 @@ export default async function handler(req: Request, res: Response) {
     const app = await getApp();
     return app(req, res);
   } catch (err: any) {
-    console.error('Server handling error, falling back to standalone catalog responder:', err);
+    console.warn('Server handling fallback to standalone catalog responder:', err?.message || err);
 
     // Bulletproof Fallback: If GET /api/products, return curated Jaipur outfits directly!
     const pathname = (req.url || '').split('?')[0].toLowerCase();
     if (req.method === 'GET' && (pathname === '/api/products' || pathname === '/products')) {
+      const prods = loadFallbackProducts();
       return res.status(200).json({
         success: true,
-        source: 'serverless-fallback',
-        products: getDefaultProducts(),
+        source: 'serverless-catalog',
+        products: prods,
       });
     }
 
     if (req.method === 'GET' && (pathname === '/api/categories' || pathname === '/categories')) {
       return res.status(200).json({
         success: true,
-        source: 'serverless-fallback',
+        source: 'serverless-catalog',
         categories: [
           { id: 1, slug: 'kurta-sets', name: 'Kurta Sets', icon: '👗', image: 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=600&q=80', description: 'Graceful embroidered and printed ethnic kurta sets.', displayOrder: 1 },
           { id: 2, slug: 'co-ord-sets', name: 'Co-ord Sets', icon: '👚', image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=600&q=80', description: 'Contemporary matching sets designed for festive flair.', displayOrder: 2 },
