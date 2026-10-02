@@ -15,10 +15,13 @@ import {
   HardDrive,
   Loader2,
   CloudUpload,
+  Edit3,
+  Camera,
+  X,
 } from 'lucide-react';
 import { Product } from '../types.ts';
 import { uploadImageToDrive, ensureDriveAuth, getAccessToken } from '../utils/imageUpload.ts';
-import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
+import { normalizeProductImageUrl, getDriveThumbnailUrl, isGoogleDriveUrl } from '../utils/imageUtils.ts';
 
 interface Banner {
   id: number;
@@ -91,6 +94,9 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
   });
   const [bannerToDelete, setBannerToDelete] = useState<{ id: number; title: string } | null>(null);
   const [productToDelete, setProductToDelete] = useState<{ id: number; name: string } | null>(null);
+  const [updatingBannerId, setUpdatingBannerId] = useState<number | null>(null);
+  const [selectedBannerForPhotoChange, setSelectedBannerForPhotoChange] = useState<Banner | null>(null);
+  const bannerDirectFileInputRef = useRef<HTMLInputElement>(null);
 
   // Categories list
   const [categoriesList, setCategoriesList] = useState<CategoryItem[]>([
@@ -464,6 +470,88 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
       reader.readAsDataURL(file);
     } catch (err: any) {
       showNotice('Photo read error: ' + (err?.message || 'Try again'));
+    }
+  };
+
+  const handleExistingBannerFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !selectedBannerForPhotoChange) return;
+    const targetBanner = selectedBannerForPhotoChange;
+
+    setUpdatingBannerId(targetBanner.id);
+    showNotice(`Banner photo optimize aur upload ho rahi hai...`);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const maxDim = 1600;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.86);
+
+            let finalUrl = dataUrl;
+            try {
+              const upRes = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl, fileName: file.name }),
+              });
+              const upData = await upRes.json();
+              if (upData.success && upData.url) {
+                finalUrl = upData.url;
+              }
+            } catch {}
+
+            await handleUpdateBannerPhoto(targetBanner.id, finalUrl);
+          }
+          setUpdatingBannerId(null);
+          setSelectedBannerForPhotoChange(null);
+          if (bannerDirectFileInputRef.current) bannerDirectFileInputRef.current.value = '';
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setUpdatingBannerId(null);
+      setSelectedBannerForPhotoChange(null);
+    }
+  };
+
+  const handleUpdateBannerPhoto = async (bannerId: number, newImageUrl: string) => {
+    const normalized = normalizeProductImageUrl(newImageUrl);
+    setBannersList((prev) =>
+      prev.map((b) => (b.id === bannerId ? { ...b, imageUrl: normalized } : b))
+    );
+    try {
+      await fetch(`/api/admin/banners/${bannerId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageUrl: normalized }),
+      });
+      showNotice('Banner photo successfully update ho gayi!');
+      window.dispatchEvent(new CustomEvent('ss-vastra-banners-updated'));
+    } catch {
+      showNotice('Banner photo local me update hui');
     }
   };
 
@@ -890,40 +978,82 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
                   bannersList.map((b) => (
                     <div
                       key={b.id}
-                      className="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-xs flex gap-3.5 items-center justify-between"
+                      className="p-3.5 bg-white rounded-2xl border border-stone-200 shadow-xs flex flex-col sm:flex-row gap-3.5 sm:items-center justify-between"
                     >
-                      <img
-                        src={b.imageUrl}
-                        alt={b.title}
-                        className="w-20 h-16 object-cover rounded-xl border border-stone-200 shrink-0"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-serif text-sm font-bold text-[#2B2320] truncate">
-                            {b.title}
-                          </h4>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold shrink-0">
-                            Live
+                      <div className="flex items-center gap-3.5 min-w-0">
+                        <div className="relative group shrink-0">
+                          <img
+                            src={normalizeProductImageUrl(b.imageUrl)}
+                            alt={b.title}
+                            className="w-24 h-16 object-cover rounded-xl border border-stone-200"
+                            onError={(e) => {
+                              const target = e.currentTarget;
+                              const fallback = getDriveThumbnailUrl(b.imageUrl);
+                              if (target.src !== fallback) target.src = fallback;
+                            }}
+                          />
+                          {updatingBannerId === b.id && (
+                            <div className="absolute inset-0 bg-black/60 rounded-xl flex items-center justify-center">
+                              <Loader2 className="w-5 h-5 text-amber-400 animate-spin" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h4 className="font-serif text-sm font-bold text-[#2B2320] truncate">
+                              {b.title}
+                            </h4>
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-bold shrink-0">
+                              Live
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-stone-500 truncate">{b.subtitle || 'Jaipur Collection'}</p>
+                          <span className="inline-block mt-0.5 text-[10px] font-mono text-[#A87A2A]">
+                            CTA: {b.ctaText || 'Order'}
                           </span>
                         </div>
-                        <p className="text-[11px] text-stone-500 truncate">{b.subtitle || 'Jaipur Collection'}</p>
-                        <span className="inline-block mt-0.5 text-[10px] font-mono text-[#A87A2A]">
-                          CTA: {b.ctaText || 'Order'}
-                        </span>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBanner(b.id)}
-                        className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
-                        title="Delete Hero Banner"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-rose-600" />
-                        <span>Delete</span>
-                      </button>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Change Photo from Phone / PC */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedBannerForPhotoChange(b);
+                            bannerDirectFileInputRef.current?.click();
+                          }}
+                          className="px-2.5 py-1.5 rounded-lg bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Phone / PC se photo badlein"
+                        >
+                          <Camera className="w-3.5 h-3.5 text-[#A87A2A]" />
+                          <span>Change Photo</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBanner(b.id)}
+                          className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 text-xs font-bold flex items-center gap-1 shrink-0 transition-colors cursor-pointer"
+                          title="Delete Hero Banner"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                   ))
                 )}
               </div>
+
+              {/* Hidden file input for changing existing banner photo */}
+              <input
+                ref={bannerDirectFileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleExistingBannerFileSelect}
+                className="hidden"
+                id="existing-banner-photo-input"
+              />
             </div>
 
             {/* Add New Banner Form */}
@@ -960,19 +1090,23 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
                   />
                 </div>
 
-                {/* Banner Photo Upload (Device & URL) */}
-                <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-xl space-y-2">
+                {/* Banner Photo Upload (Device & Google Drive) */}
+                <div className="p-3.5 bg-gradient-to-br from-[#FBF7F0] to-[#F5ECE1] border-2 border-[#A87A2A]/30 rounded-2xl space-y-2.5">
                   <div className="flex items-center justify-between">
-                    <label className="block font-semibold text-stone-700">
-                      Banner Image (Photo Upload) *
+                    <label className="block font-bold text-stone-800 text-xs flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4 text-[#A87A2A]" />
+                      <span>Banner Photo (Photo Upload) *</span>
                     </label>
-                    <span className="text-[10px] text-[#A87A2A] font-medium">Device & Web URL</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#A87A2A]/10 text-[#A87A2A] font-bold">
+                      PC • Mobile • Google Drive
+                    </span>
                   </div>
 
+                  {/* Direct Phone / PC Upload Button */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <label className="px-3 py-1.5 bg-[#2B2320] hover:bg-stone-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs flex items-center gap-1.5">
+                    <label className="px-3.5 py-2 bg-[#2B2320] hover:bg-stone-800 text-white text-xs font-bold rounded-xl cursor-pointer transition-all shadow-xs flex items-center gap-1.5">
                       <Upload className="w-3.5 h-3.5 text-amber-400" />
-                      <span>Phone / PC se Photo Daalein</span>
+                      <span>📁 Phone / PC se Photo Daalein</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -982,32 +1116,59 @@ export const AdminCatalogImages: React.FC<AdminCatalogImagesProps> = ({
                     </label>
                   </div>
 
+                  {/* Image URL or Google Drive Link */}
                   <div>
+                    <label className="block text-[10px] font-semibold text-stone-600 mb-1">
+                      Ya Image URL / Google Drive Share Link Paste Karein:
+                    </label>
                     <input
                       type="text"
                       required
                       value={newBanner.imageUrl}
-                      onChange={(e) => setNewBanner({ ...newBanner, imageUrl: e.target.value })}
-                      placeholder="Ya Image link paste karein..."
-                      className="w-full px-3 py-2 border border-stone-300 rounded-xl font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        const normalized = normalizeProductImageUrl(val);
+                        setNewBanner({ ...newBanner, imageUrl: normalized });
+                      }}
+                      placeholder="https://drive.google.com/file/d/... ya image CDN URL"
+                      className="w-full px-3 py-2 border border-stone-300 rounded-xl font-mono text-[11px] bg-white focus:outline-none focus:border-[#A87A2A]"
                     />
                   </div>
 
+                  {/* Google Drive Helper Note */}
+                  <div className="p-2 bg-amber-50/80 rounded-xl border border-amber-200/80 text-[10px] text-amber-900 flex items-start gap-1.5">
+                    <CloudUpload className="w-3.5 h-3.5 text-[#A87A2A] shrink-0 mt-0.5" />
+                    <p className="leading-relaxed">
+                      <strong>Google Drive Photo Tip:</strong> Google Drive link paste karte hi hamara system use auto-convert kar deta hai taaki storefront par high-speed dikhai de.
+                    </p>
+                  </div>
+
+                  {/* Live Photo Preview */}
                   {newBanner.imageUrl && (
-                    <div className="flex items-center gap-3 p-2 bg-white rounded-lg border border-stone-200">
+                    <div className="flex items-center gap-3 p-2 bg-white rounded-xl border border-stone-200">
                       <img
-                        src={newBanner.imageUrl}
+                        src={normalizeProductImageUrl(newBanner.imageUrl)}
                         alt="Banner Preview"
-                        className="w-16 h-12 object-cover rounded-md border border-stone-200"
+                        className="w-20 h-14 object-cover rounded-lg border border-stone-200 shadow-xs"
+                        onError={(e) => {
+                          const target = e.currentTarget;
+                          const fallback = getDriveThumbnailUrl(newBanner.imageUrl);
+                          if (target.src !== fallback) target.src = fallback;
+                        }}
                       />
-                      <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        Photo Ready
-                      </span>
+                      <div>
+                        <span className="text-[11px] font-bold text-emerald-700 flex items-center gap-1">
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Photo Attached & Ready
+                        </span>
+                        <p className="text-[9.5px] text-stone-500 font-mono truncate max-w-[200px]">
+                          {newBanner.imageUrl.slice(0, 35)}...
+                        </p>
+                      </div>
                       <button
                         type="button"
                         onClick={() => setNewBanner({ ...newBanner, imageUrl: '' })}
-                        className="ml-auto text-[11px] text-rose-600 hover:underline font-semibold"
+                        className="ml-auto text-[11px] text-rose-600 hover:underline font-bold px-2 py-1"
                       >
                         Remove
                       </button>

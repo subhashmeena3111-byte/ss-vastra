@@ -70,3 +70,34 @@ export function getDriveThumbnailUrl(url: string): string {
   }
   return GUARANTEED_FALLBACK;
 }
+
+/**
+ * Transforms any Google Drive video link or direct URL into a streamable MP4 URL
+ */
+export function normalizeVideoUrl(url?: string | null): string {
+  if (!url) return '';
+  const trimmed = url.trim();
+  if (!trimmed) return '';
+
+  if (isGoogleDriveUrl(trimmed)) {
+    const driveId = extractDriveFileId(trimmed);
+    if (driveId) {
+      // Direct stream download URL works in HTML5 video elements for shared Drive files
+      return `https://drive.google.com/uc?export=download&id=${driveId}`;
+    }
+  }
+
+  return trimmed;
+}
+
+/**
+ * Returns Google Drive preview embed URL (useful for fallback or iframe player)
+ */
+export function getDriveVideoPreviewUrl(url: string): string | null {
+  const driveId = extractDriveFileId(url);
+  if (driveId) {
+    return `https://drive.google.com/file/d/${driveId}/preview`;
+  }
+  return null;
+}
+

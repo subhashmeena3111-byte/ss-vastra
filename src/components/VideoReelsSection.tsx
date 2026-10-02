@@ -13,6 +13,7 @@ import {
   Crown,
 } from 'lucide-react';
 import { VideoReel, Product } from '../types';
+import { normalizeVideoUrl, normalizeProductImageUrl } from '../utils/imageUtils.ts';
 
 interface VideoReelsSectionProps {
   products: Product[];
@@ -252,8 +253,8 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
                   ref={(el) => {
                     videoRefs.current[reel.id] = el;
                   }}
-                  src={reel.videoUrl}
-                  poster={reel.posterUrl}
+                  src={normalizeVideoUrl(reel.videoUrl)}
+                  poster={reel.posterUrl ? normalizeProductImageUrl(reel.posterUrl) : undefined}
                   loop
                   playsInline
                   muted={isMuted}

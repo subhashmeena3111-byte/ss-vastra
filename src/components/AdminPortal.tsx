@@ -82,7 +82,7 @@ import { AdminCatalogImages } from './AdminCatalogImages.tsx';
 import { AdminDataManager } from './AdminDataManager.tsx';
 import { DeepLinkModal } from './DeepLinkModal.tsx';
 import { uploadImageToDrive, ensureDriveAuth, getAccessToken } from '../utils/imageUpload.ts';
-import { normalizeProductImageUrl, getDriveThumbnailUrl, isGoogleDriveUrl } from '../utils/imageUtils.ts';
+import { normalizeProductImageUrl, getDriveThumbnailUrl, isGoogleDriveUrl, normalizeVideoUrl, extractDriveFileId } from '../utils/imageUtils.ts';
 import { sanitizeProduct, sanitizeProductList } from '../utils/productUtils.ts';
 import { getDefaultProducts } from '../data/defaultProducts.ts';
 
@@ -232,6 +232,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [editingReel, setEditingReel] = useState<Partial<VideoReel> | null>(null);
   const [showReelModal, setShowReelModal] = useState(false);
   const [isSavingReel, setIsSavingReel] = useState(false);
+  const [isUploadingReelVideo, setIsUploadingReelVideo] = useState(false);
+  const [reelVideoUploadMsg, setReelVideoUploadMsg] = useState<string | null>(null);
+  const [isUploadingReelPoster, setIsUploadingReelPoster] = useState(false);
+  const reelVideoFileInputRef = useRef<HTMLInputElement>(null);
+  const reelPosterFileInputRef = useRef<HTMLInputElement>(null);
 
   // Admin Profile & Password Update State
   const [adminProfileForm, setAdminProfileForm] = useState({
@@ -1330,6 +1335,92 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         setReelsList(data.reels);
       }
     } catch {}
+  };
+
+  const handleReelVideoFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const sizeMb = file.size / (1024 * 1024);
+    setIsUploadingReelVideo(true);
+    setReelVideoUploadMsg(`Video load ho rahi hai (${sizeMb.toFixed(1)} MB)...`);
+
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        try {
+          const dataUrl = event.target?.result as string;
+          setReelVideoUploadMsg('Cloud storage par upload ho rahi hai...');
+
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              video: dataUrl,
+              fileName: file.name,
+            }),
+          });
+          const data = await res.json();
+          const finalUrl = data.success && data.url ? data.url : dataUrl;
+          setEditingReel((prev) => (prev ? { ...prev, videoUrl: finalUrl } : prev));
+          setReelVideoUploadMsg(null);
+          setActionMessage('Video reel successfully upload ho gayi!');
+          setTimeout(() => setActionMessage(null), 3000);
+        } catch {
+          // Fallback to dataUrl directly
+          const dataUrl = event.target?.result as string;
+          setEditingReel((prev) => (prev ? { ...prev, videoUrl: dataUrl } : prev));
+          setReelVideoUploadMsg(null);
+        } finally {
+          setIsUploadingReelVideo(false);
+          if (reelVideoFileInputRef.current) reelVideoFileInputRef.current.value = '';
+        }
+      };
+      reader.onerror = () => {
+        alert('Video read karne me error aayi. Kripya doosri video chunein ya Google Drive link paste karein.');
+        setIsUploadingReelVideo(false);
+        setReelVideoUploadMsg(null);
+      };
+      reader.readAsDataURL(file);
+    } catch (err: any) {
+      alert('Upload error: ' + (err?.message || 'Error'));
+      setIsUploadingReelVideo(false);
+      setReelVideoUploadMsg(null);
+    }
+  };
+
+  const handleReelPosterFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingReelPoster(true);
+    try {
+      const reader = new FileReader();
+      reader.onload = async (event) => {
+        const dataUrl = event.target?.result as string;
+        try {
+          const res = await fetch('/api/upload', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              image: dataUrl,
+              fileName: file.name,
+            }),
+          });
+          const data = await res.json();
+          const finalUrl = data.success && data.url ? data.url : dataUrl;
+          setEditingReel((prev) => (prev ? { ...prev, posterUrl: finalUrl } : prev));
+        } catch {
+          setEditingReel((prev) => (prev ? { ...prev, posterUrl: dataUrl } : prev));
+        } finally {
+          setIsUploadingReelPoster(false);
+          if (reelPosterFileInputRef.current) reelPosterFileInputRef.current.value = '';
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch {
+      setIsUploadingReelPoster(false);
+    }
   };
 
   const handleSaveReel = async (e: React.FormEvent) => {
@@ -4730,8 +4821,8 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             {/* 9:16 Video Preview Card */}
                             <div className="aspect-[9/16] bg-stone-900 relative overflow-hidden group">
                               <video
-                                src={reel.videoUrl}
-                                poster={reel.posterUrl}
+                                src={normalizeVideoUrl(reel.videoUrl)}
+                                poster={reel.posterUrl ? normalizeProductImageUrl(reel.posterUrl) : undefined}
                                 loop
                                 muted
                                 playsInline
@@ -4762,7 +4853,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                               <div className="absolute bottom-3 left-3 right-3 p-2 bg-white/95 backdrop-blur-md rounded-xl border border-white/40 flex items-center gap-2">
                                 <div className="w-9 h-11 rounded-lg overflow-hidden shrink-0 border border-stone-200 bg-stone-100">
                                   <img
-                                    src={reel.productImage || reel.posterUrl}
+                                    src={normalizeProductImageUrl(reel.productImage || reel.posterUrl)}
                                     alt={reel.productTitle || reel.title}
                                     className="w-full h-full object-cover"
                                   />
@@ -9853,36 +9944,186 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   />
                 </div>
 
-                {/* Video MP4 URL */}
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">
-                    9:16 Portrait Video MP4 URL *
-                  </label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://example.com/video.mp4 or mixkit / CDN video URL"
-                    value={editingReel.videoUrl || ''}
-                    onChange={(e) => setEditingReel({ ...editingReel, videoUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 font-mono text-[11px] focus:outline-none focus:border-[#A87A2A]"
-                  />
-                  <p className="text-[10px] text-stone-400 mt-1">
-                    Direct MP4 video URL (9:16 aspect ratio). Mobile portrait format recommended.
-                  </p>
+                {/* 9:16 Video Upload (Direct PC/Mobile & Google Drive) */}
+                <div className="p-4 bg-gradient-to-br from-[#FBF7F0] to-[#F5ECE1] border-2 border-[#A87A2A]/30 rounded-2xl space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-bold text-stone-800 text-xs flex items-center gap-1.5">
+                      <Film className="w-4 h-4 text-[#A87A2A]" />
+                      <span>9:16 Portrait Reel Video *</span>
+                    </label>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#A87A2A]/10 text-[#A87A2A] font-bold">
+                      PC • Mobile • Google Drive
+                    </span>
+                  </div>
+
+                  {/* Direct Device Video Upload Button */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={reelVideoFileInputRef}
+                      type="file"
+                      accept="video/mp4,video/webm,video/quicktime,video/*"
+                      onChange={handleReelVideoFileSelect}
+                      className="hidden"
+                      id="admin-reel-video-file"
+                    />
+                    <label
+                      htmlFor="admin-reel-video-file"
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-2 cursor-pointer transition-all shadow-sm ${
+                        isUploadingReelVideo
+                          ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                          : 'bg-[#2B2320] hover:bg-stone-800 text-white'
+                      }`}
+                    >
+                      {isUploadingReelVideo ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-amber-400" />
+                          <span>{reelVideoUploadMsg || 'Video Upload Ho Rahi Hai...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-4 h-4 text-amber-400" />
+                          <span>📁 Phone / PC se Video Upload Karein</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+
+                  {/* Video URL or Google Drive Paste Input */}
+                  <div>
+                    <label className="block text-[10px] font-semibold text-stone-600 mb-1">
+                      Ya Google Drive / Cloud Video URL Paste Karein:
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        required
+                        placeholder="https://drive.google.com/file/d/... ya direct .mp4 link"
+                        value={editingReel.videoUrl || ''}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const normalized = normalizeVideoUrl(val);
+                          setEditingReel({ ...editingReel, videoUrl: normalized });
+                        }}
+                        className="w-full px-3 py-2 pr-8 rounded-xl border border-stone-300 font-mono text-[11px] bg-white focus:outline-none focus:border-[#A87A2A]"
+                      />
+                      {editingReel.videoUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setEditingReel({ ...editingReel, videoUrl: '' })}
+                          className="absolute right-2 top-2.5 text-stone-400 hover:text-rose-600"
+                          title="Clear Video URL"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Google Drive Tip Banner */}
+                  <div className="p-2.5 bg-amber-50/80 rounded-xl border border-amber-200/80 text-[10.5px] text-amber-900 flex items-start gap-2">
+                    <CloudUpload className="w-4 h-4 text-[#A87A2A] shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-bold">Google Drive Video Kaise Use Karein?</p>
+                      <p className="text-[9.5px] text-stone-600 leading-relaxed">
+                        Drive me video upload karein ➔ "Share" ➔ "Anyone with link" (Viewer) karein ➔ link yahan paste karein. Hamara system ise auto-streamable video bana dega!
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Video Live Preview inside Modal */}
+                  {editingReel.videoUrl && (
+                    <div className="p-3 bg-stone-900 rounded-2xl text-center space-y-2">
+                      <div className="flex items-center justify-between text-stone-300 text-[10px] px-1 font-bold">
+                        <span className="flex items-center gap-1 text-emerald-400">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>Video Attached & Ready</span>
+                        </span>
+                        <span className="text-stone-400 font-mono text-[9px] truncate max-w-[200px]">
+                          {editingReel.videoUrl.slice(0, 35)}...
+                        </span>
+                      </div>
+
+                      <div className="relative max-w-[180px] aspect-[9/16] mx-auto rounded-xl overflow-hidden border border-white/20 shadow-lg bg-black">
+                        <video
+                          key={editingReel.videoUrl}
+                          src={normalizeVideoUrl(editingReel.videoUrl)}
+                          poster={editingReel.posterUrl}
+                          controls
+                          playsInline
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
 
-                {/* Poster Image URL */}
-                <div>
-                  <label className="block font-semibold text-stone-700 mb-1">
-                    Cover / Poster Image URL (Optional)
-                  </label>
+                {/* Poster / Cover Image (Device & URL) */}
+                <div className="p-3 bg-[#FBF7F0] border border-stone-200 rounded-2xl space-y-2">
+                  <div className="flex items-center justify-between">
+                    <label className="block font-semibold text-stone-700 text-[11px]">
+                      Cover / Poster Photo (Optional)
+                    </label>
+                    <span className="text-[9.5px] text-stone-500">Video se pehle dikhega</span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <input
+                      ref={reelPosterFileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleReelPosterFileSelect}
+                      className="hidden"
+                      id="admin-reel-poster-file"
+                    />
+                    <label
+                      htmlFor="admin-reel-poster-file"
+                      className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors ${
+                        isUploadingReelPoster
+                          ? 'bg-stone-300 text-stone-500'
+                          : 'bg-stone-800 hover:bg-stone-700 text-white'
+                      }`}
+                    >
+                      {isUploadingReelPoster ? (
+                        <>
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          <span>Uploading Cover...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="w-3 h-3 text-amber-400" />
+                          <span>📁 Cover Photo Daalein</span>
+                        </>
+                      )}
+                    </label>
+                  </div>
+
                   <input
-                    type="url"
-                    placeholder="https://images.unsplash.com/... or Google Drive URL"
+                    type="text"
+                    placeholder="Ya Cover Photo link / Google Drive image link paste karein..."
                     value={editingReel.posterUrl || ''}
-                    onChange={(e) => setEditingReel({ ...editingReel, posterUrl: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-stone-300 text-[11px] focus:outline-none focus:border-[#A87A2A]"
+                    onChange={(e) => setEditingReel({ ...editingReel, posterUrl: normalizeProductImageUrl(e.target.value) })}
+                    className="w-full px-3 py-1.5 rounded-xl border border-stone-300 text-[11px] bg-white focus:outline-none focus:border-[#A87A2A]"
                   />
+
+                  {editingReel.posterUrl && (
+                    <div className="flex items-center gap-2 p-1.5 bg-white rounded-lg border border-stone-200">
+                      <img
+                        src={normalizeProductImageUrl(editingReel.posterUrl)}
+                        alt="Poster Preview"
+                        className="w-10 h-14 object-cover rounded border"
+                      />
+                      <span className="text-[10px] text-stone-600 font-medium truncate flex-1">
+                        Cover Preview Ready
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingReel({ ...editingReel, posterUrl: '' })}
+                        className="text-[10px] text-rose-600 hover:underline font-bold px-1"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Linked Outfit Product */}

@@ -360,10 +360,20 @@ app.get('/api/uploads/:file', async (req: Request, res: Response) => {
   const localPath = path.join(process.cwd(), 'public', 'uploads', fileName);
   const tmpPath = path.join('/tmp', 'uploads', fileName);
 
+  let determinedMime = 'image/jpeg';
+  if (fileName.endsWith('.png')) determinedMime = 'image/png';
+  else if (fileName.endsWith('.webp')) determinedMime = 'image/webp';
+  else if (fileName.endsWith('.gif')) determinedMime = 'image/gif';
+  else if (fileName.endsWith('.mp4')) determinedMime = 'video/mp4';
+  else if (fileName.endsWith('.webm')) determinedMime = 'video/webm';
+  else if (fileName.endsWith('.mov')) determinedMime = 'video/quicktime';
+
   if (fs.existsSync(localPath)) {
+    res.setHeader('Content-Type', determinedMime);
     return res.sendFile(localPath);
   }
   if (fs.existsSync(tmpPath)) {
+    res.setHeader('Content-Type', determinedMime);
     return res.sendFile(tmpPath);
   }
 
@@ -374,7 +384,7 @@ app.get('/api/uploads/:file', async (req: Request, res: Response) => {
       const snap = await getDoc(doc(db, 'uploaded_images', fileName));
       if (snap.exists()) {
         const fileRecord = snap.data();
-        const mime = fileRecord.mimeType || (fileName.endsWith('.png') ? 'image/png' : fileName.endsWith('.webp') ? 'image/webp' : 'image/jpeg');
+        const mime = fileRecord.mimeType || determinedMime;
         const buf = Buffer.from(fileRecord.data, 'base64');
 
         // Cache locally in /tmp so subsequent reads are instant
@@ -396,21 +406,32 @@ app.get('/api/uploads/:file', async (req: Request, res: Response) => {
   return res.redirect('https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80');
 });
 
-// Standalone Local & Cloud Image Upload (Permanent, Zero-Loss for Vercel & Local)
+// Standalone Local & Cloud Image & Video Upload (Permanent, Zero-Loss for Vercel & Local)
 app.post('/api/upload', async (req: Request, res: Response) => {
   try {
-    const { image, fileName } = req.body;
-    if (!image) {
-      return res.status(400).json({ success: false, error: 'No image provided' });
+    const { image, file, video, fileName } = req.body;
+    const mediaPayload = image || file || video;
+    if (!mediaPayload) {
+      return res.status(400).json({ success: false, error: 'No media data provided' });
     }
 
-    if (typeof image === 'string' && image.startsWith('data:image/')) {
-      const matches = image.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
+    if (typeof mediaPayload === 'string' && (mediaPayload.startsWith('data:image/') || mediaPayload.startsWith('data:video/'))) {
+      const matches = mediaPayload.match(/^data:([A-Za-z0-9-+\/]+);base64,(.+)$/);
       if (matches && matches.length === 3) {
         const mimeType = matches[1];
         const base64Data = matches[2];
-        const ext = mimeType.includes('png') ? '.png' : mimeType.includes('webp') ? '.webp' : '.jpg';
-        const cleanName = (fileName ? fileName.replace(/[^a-zA-Z0-9_-]/g, '_') : `outfit_${Date.now()}`) + ext;
+        let ext = '.jpg';
+        if (mimeType.includes('png')) ext = '.png';
+        else if (mimeType.includes('webp')) ext = '.webp';
+        else if (mimeType.includes('gif')) ext = '.gif';
+        else if (mimeType.includes('mp4')) ext = '.mp4';
+        else if (mimeType.includes('webm')) ext = '.webm';
+        else if (mimeType.includes('quicktime') || mimeType.includes('mov')) ext = '.mov';
+
+        const isVideo = mimeType.startsWith('video');
+        const defaultPrefix = isVideo ? 'reel' : 'media';
+        const rawName = fileName ? fileName.replace(/[^a-zA-Z0-9_-]/g, '_') : `${defaultPrefix}_${Date.now()}`;
+        const cleanName = rawName.includes('.') ? rawName : `${rawName}${ext}`;
         const safeFileName = `${Date.now()}_${cleanName}`;
 
         // 1. Save to local or /tmp filesystem
@@ -441,19 +462,19 @@ app.post('/api/upload', async (req: Request, res: Response) => {
             });
           }
         } catch (fsErr) {
-          console.warn('Firestore image persist note:', fsErr);
+          console.warn('Firestore media persist note:', fsErr);
         }
 
         return res.json({ success: true, url: `/api/uploads/${safeFileName}` });
       }
 
-      return res.json({ success: true, url: image });
+      return res.json({ success: true, url: mediaPayload });
     }
 
-    return res.json({ success: true, url: image });
+    return res.json({ success: true, url: mediaPayload });
   } catch (err: any) {
     console.error('Upload error handled safely:', err);
-    const fallbackUrl = req.body?.image || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
+    const fallbackUrl = req.body?.image || req.body?.video || req.body?.file || 'https://images.unsplash.com/photo-1558769132-cb1aea458c5e?auto=format&fit=crop&w=800&q=80';
     res.json({ success: true, url: fallbackUrl });
   }
 });

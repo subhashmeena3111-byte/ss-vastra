@@ -9,6 +9,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import type { Banner } from '../types.ts';
+import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
 
 interface HeroSliderProps {
   banners?: Banner[];
@@ -164,12 +165,15 @@ export const HeroSlider: React.FC<HeroSliderProps> = ({
             <div className="relative w-full max-w-[460px] aspect-[4/5] sm:aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/80 group">
               <img
                 key={currentBanner.id + '-' + currentBanner.imageUrl}
-                src={currentBanner.imageUrl || FALLBACK_HERO_IMAGE}
+                src={normalizeProductImageUrl(currentBanner.imageUrl) || FALLBACK_HERO_IMAGE}
                 alt={currentBanner.title}
                 className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 animate-in fade-in duration-500"
                 onError={(e) => {
                   const target = e.currentTarget;
-                  if (target.src !== FALLBACK_HERO_IMAGE) {
+                  const fallback = getDriveThumbnailUrl(currentBanner.imageUrl);
+                  if (target.src !== fallback && fallback !== target.src) {
+                    target.src = fallback;
+                  } else if (target.src !== FALLBACK_HERO_IMAGE) {
                     target.src = FALLBACK_HERO_IMAGE;
                   }
                 }}
