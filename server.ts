@@ -4254,7 +4254,7 @@ app.post(
         permissions: currentAdminUser.permissions,
       };
 
-      const newToken = jwt.sign(updatedAdmin, JWT_SECRET, { expiresIn: '7d' });
+      const newToken = signAdminToken(updatedAdmin);
 
       res.json({
         success: true,
