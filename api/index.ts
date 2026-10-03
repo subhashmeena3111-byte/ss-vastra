@@ -115,6 +115,59 @@ export default async function handler(req: Request, res: Response) {
       });
     }
 
+    if (req.method === 'GET' && (pathname === '/api/reviews' || pathname === '/reviews')) {
+      return res.status(200).json({
+        success: true,
+        source: 'serverless-reviews',
+        reviews: [
+          {
+            id: 1,
+            productId: 9,
+            productName: 'Teal Embroidered Kurta Pant & Dupatta Suit Set',
+            author: 'Pooja Sharma',
+            city: 'Jaipur',
+            rating: 5,
+            title: 'Authentic Sanganeri Craftsmanship',
+            comment: 'SS VASTRA ka Teal suit kapda bohot hi mulayam aur comfortable hai. Finishing bilkul boutique jaisi mili.',
+            isVerified: true,
+          },
+          {
+            id: 2,
+            productId: 10,
+            productName: 'Peach Embroidered Kurta Pant & Dupatta Suit Set',
+            author: 'Anjali Verma',
+            city: 'Delhi NCR',
+            rating: 5,
+            title: 'Graceful Color & Fast Delivery',
+            comment: 'Peach suit ka color shade aur embroidery exact photo jaisi aayi. Delivery Delhi me 3 din me ho gayi.',
+            isVerified: true,
+          },
+          {
+            id: 3,
+            productId: 11,
+            productName: 'Red Floral Embroidered Kurta Pant Set with Dupatta',
+            author: 'Neha Meena',
+            city: 'Jaipur',
+            rating: 5,
+            title: 'Festive Wear Perfection',
+            comment: 'Rani red embroidery dupatta ke saath look bohot sundar lagta hai. Sanganer craft direct milna badi baat hai.',
+            isVerified: true,
+          },
+          {
+            id: 4,
+            productId: 12,
+            productName: 'Olive Green Embroidered 3-Piece Suit Set',
+            author: 'Sunita Rathore',
+            city: 'Jodhpur',
+            rating: 5,
+            title: 'Pure Cambric Quality & Perfect Fit',
+            comment: 'Fitting एकदम perfect aayi. Packaging bhi premium thi aur COD smoothly receive hua.',
+            isVerified: true,
+          },
+        ],
+      });
+    }
+
     return res.status(200).json({
       success: false,
       diagnosticError: true,
