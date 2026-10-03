@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Package, Plus } from 'lucide-react';
+import { Package, Plus, MessageCircle } from 'lucide-react';
 import { Navbar } from './components/Navbar.tsx';
 import { HeroSlider } from './components/HeroSlider.tsx';
 import { ProductCard } from './components/ProductCard.tsx';
