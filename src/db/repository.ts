@@ -11,6 +11,8 @@ import {
   banners,
   activityLogs,
   settings,
+  customers,
+  reviews,
 } from './schema.ts';
 import { eq, desc, asc, and, or, sql } from 'drizzle-orm';
 import { localStore } from './localStore.ts';
@@ -932,4 +934,181 @@ export async function getActivityLogsList() {
     }
   }
   return localStore.getActivityLogs();
+}
+
+// 9. Customers
+export async function getCustomersList() {
+  if (await isDbReady()) {
+    try {
+      const allCustomers = await db.select().from(customers).orderBy(desc(customers.id));
+      if (allCustomers && allCustomers.length > 0) return allCustomers;
+    } catch {
+      markDbOffline();
+    }
+  }
+  return localStore.getCustomers();
+}
+
+export async function upsertCustomerRecord(customerData: {
+  name: string;
+  phone: string;
+  email?: string;
+  address?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  orderAmount?: number;
+}) {
+  const normPhone = customerData.phone.replace(/[^0-9]/g, '');
+  if (await isDbReady()) {
+    try {
+      const existing = await db.select().from(customers).where(eq(customers.phone, normPhone));
+      if (existing.length > 0) {
+        const c = existing[0];
+        const updated = await db
+          .update(customers)
+          .set({
+            name: customerData.name || c.name,
+            email: customerData.email || c.email,
+            address: customerData.address || c.address,
+            city: customerData.city || c.city,
+            state: customerData.state || c.state,
+            pincode: customerData.pincode || c.pincode,
+            totalOrders: (c.totalOrders || 0) + 1,
+            totalSpent: (c.totalSpent || 0) + (customerData.orderAmount || 0),
+            updatedAt: new Date(),
+          })
+          .where(eq(customers.id, c.id))
+          .returning();
+        return updated[0];
+      } else {
+        const inserted = await db
+          .insert(customers)
+          .values({
+            name: customerData.name,
+            phone: normPhone,
+            email: customerData.email || null,
+            address: customerData.address || null,
+            city: customerData.city || 'Jaipur',
+            state: customerData.state || 'Rajasthan',
+            pincode: customerData.pincode || '303905',
+            totalOrders: 1,
+            totalSpent: customerData.orderAmount || 0,
+          })
+          .returning();
+        return inserted[0];
+      }
+    } catch {
+      markDbOffline();
+    }
+  }
+  return localStore.upsertCustomer(customerData);
+}
+
+// 10. Reviews
+export async function getReviewsList(productId?: number) {
+  if (await isDbReady()) {
+    try {
+      const query = db.select().from(reviews).where(eq(reviews.isApproved, true)).orderBy(desc(reviews.id));
+      const res = await query;
+      if (res && res.length > 0) {
+        if (productId) {
+          return res.filter((r) => r.productId === productId);
+        }
+        return res;
+      }
+    } catch {
+      markDbOffline();
+    }
+  }
+  return [
+    {
+      id: 1,
+      productId: 9,
+      productName: 'Teal Embroidered Kurta Pant & Dupatta Suit Set',
+      author: 'Pooja Sharma',
+      city: 'Jaipur',
+      rating: 5,
+      title: 'Authentic Sanganeri Craftsmanship',
+      comment: 'SS VASTRA ka Teal suit kapda bohot hi mulayam aur comfortable hai. Finishing bilkul boutique jaisi mili.',
+      isVerified: true,
+      createdAt: '2026-09-25T10:00:00.000Z',
+    },
+    {
+      id: 2,
+      productId: 10,
+      productName: 'Peach Embroidered Kurta Pant & Dupatta Suit Set',
+      author: 'Anjali Verma',
+      city: 'Delhi NCR',
+      rating: 5,
+      title: 'Graceful Color & Fast Delivery',
+      comment: 'Peach suit ka color shade aur embroidery exact photo jaisi aayi. Delivery Delhi me 3 din me ho gayi.',
+      isVerified: true,
+      createdAt: '2026-09-26T12:00:00.000Z',
+    },
+    {
+      id: 3,
+      productId: 11,
+      productName: 'Red Floral Embroidered Kurta Pant Set with Dupatta',
+      author: 'Neha Meena',
+      city: 'Jaipur',
+      rating: 5,
+      title: 'Festive Wear Perfection',
+      comment: 'Rani red embroidery dupatta ke saath look bohot sundar lagta hai. Sanganer craft direct milna badi baat hai.',
+      isVerified: true,
+      createdAt: '2026-09-27T14:30:00.000Z',
+    },
+    {
+      id: 4,
+      productId: 12,
+      productName: 'Olive Green Embroidered 3-Piece Suit Set',
+      author: 'Sunita Rathore',
+      city: 'Jodhpur',
+      rating: 5,
+      title: 'Pure Cambric Quality & Perfect Fit',
+      comment: 'Fitting एकदम perfect aayi. Packaging bhi premium thi aur COD smoothly receive hua.',
+      isVerified: true,
+      createdAt: '2026-09-28T09:15:00.000Z',
+    },
+  ];
+}
+
+export async function createReviewRecord(reviewData: {
+  productId?: number;
+  productName?: string;
+  author: string;
+  city?: string;
+  rating: number;
+  title?: string;
+  comment: string;
+}) {
+  if (await isDbReady()) {
+    try {
+      const inserted = await db
+        .insert(reviews)
+        .values({
+          productId: reviewData.productId || null,
+          productName: reviewData.productName || null,
+          author: reviewData.author,
+          city: reviewData.city || 'Jaipur',
+          rating: reviewData.rating || 5,
+          title: reviewData.title || null,
+          comment: reviewData.comment,
+          isVerified: true,
+          isApproved: true,
+        })
+        .returning();
+      return inserted[0];
+    } catch {
+      markDbOffline();
+    }
+  }
+  return {
+    id: Date.now(),
+    ...reviewData,
+    city: reviewData.city || 'Jaipur',
+    isVerified: true,
+    isApproved: true,
+    createdAt: new Date().toISOString(),
+  };
 }

@@ -1064,38 +1064,9 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
             }
           }
 
-          // If server returned active products, update local storage cache safely
-          if (prods.length > 0) {
-            try {
-              const activeIds = new Set(prods.map((p) => p.id));
-              const deletedIds: number[] = JSON.parse(
-                localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-              );
-              const validDeletedIds = deletedIds.filter((id) => !activeIds.has(id));
-              localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(validDeletedIds));
-            } catch {}
+          if (prods.length === 0) {
+            prods = getDefaultProducts();
           }
-
-          // Merge any custom draft products (excluding deleted IDs)
-          try {
-            const deletedIds: number[] = JSON.parse(
-              localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-            );
-            if (prods.length === 0 && !deletedIds.includes(1)) {
-              prods = getDefaultProducts();
-            }
-            const rawCustom = JSON.parse(
-              localStorage.getItem('ss_vastra_custom_products') || '[]'
-            );
-            const customProds: Product[] = sanitizeProductList(rawCustom).filter(
-              (cp) => !deletedIds.includes(cp.id)
-            );
-            for (const cp of customProds) {
-              const idx = prods.findIndex((p: any) => p.id === cp.id);
-              if (idx >= 0) prods[idx] = { ...prods[idx], ...cp };
-              else prods.unshift(cp);
-            }
-          } catch {}
 
           setProductsList(sanitizeProductList(prods));
         } catch (err) {
@@ -2335,29 +2306,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       extraImages: extraSlots,
     };
 
-    const persistLocally = (prodToSave: Product) => {
-      try {
-        const rawCustom = JSON.parse(
-          localStorage.getItem('ss_vastra_custom_products') || '[]'
-        );
-        const customProds: Product[] = sanitizeProductList(rawCustom);
-        const cIdx = customProds.findIndex((p) => p.id === prodToSave.id);
-        if (cIdx >= 0) customProds[cIdx] = { ...customProds[cIdx], ...prodToSave };
-        else customProds.unshift(prodToSave);
-
-        try {
-          localStorage.setItem('ss_vastra_custom_products', JSON.stringify(customProds.slice(0, 50)));
-        } catch (storageErr) {
-          console.warn('LocalStorage save note:', storageErr);
-        }
-
-        const deletedIds: number[] = JSON.parse(
-          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-        );
-        const filteredDeleted = deletedIds.filter((id) => id !== prodToSave.id);
-        localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(filteredDeleted));
-      } catch {}
-
+    const updateProductState = (prodToSave: Product) => {
       setProductsList((prev) => {
         const idx = prev.findIndex((p) => p.id === prodToSave.id);
         if (idx >= 0) {
@@ -2402,7 +2351,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           id: isNew ? Date.now() : editingProduct.id!,
         };
         const savedItem: Product = sanitizeProduct(rawSaved);
-        persistLocally(savedItem);
+        updateProductState(savedItem);
         setActionMessage(`Product ${isNew ? 'safalata se add ho gaya' : 'safalata se update ho gaya'}!`);
         setTimeout(() => setActionMessage(null), 3000);
         loadTabData('products');
@@ -2415,7 +2364,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
           isActive: true,
           createdAt: new Date().toISOString(),
         });
-        persistLocally(fallbackItem);
+        updateProductState(fallbackItem);
         setActionMessage(`Product catalog me save ho gaya (${isNew ? 'Naya Product Added' : 'Product Updated'})!`);
         setTimeout(() => setActionMessage(null), 3500);
       }
@@ -2429,7 +2378,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
         isActive: true,
         createdAt: new Date().toISOString(),
       });
-      persistLocally(fallbackItem);
+      updateProductState(fallbackItem);
       setActionMessage(`Product catalog me save ho gaya (${isNew ? 'Naya Product Added' : 'Product Updated'})!`);
       setTimeout(() => setActionMessage(null), 3500);
     }
@@ -2446,23 +2395,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       setEditingProduct(null);
     }
 
-    // 2. Persist deletion in localStorage so it NEVER reappears even if Vercel serverless restarts
-    try {
-      const deletedIds: number[] = JSON.parse(
-        localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-      );
-      if (!deletedIds.includes(id)) {
-        deletedIds.push(id);
-        localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(deletedIds));
-      }
-      const customProds: any[] = JSON.parse(
-        localStorage.getItem('ss_vastra_custom_products') || '[]'
-      );
-      const filteredCustom = customProds.filter((p) => p.id !== id);
-      localStorage.setItem('ss_vastra_custom_products', JSON.stringify(filteredCustom));
-    } catch {}
-
-    // 3. Dispatch global sync event
+    // 2. Dispatch global sync event
     if (onProductsUpdated) onProductsUpdated();
     window.dispatchEvent(new CustomEvent('ss-vastra-products-updated'));
 

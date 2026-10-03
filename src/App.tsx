@@ -390,23 +390,7 @@ export function App() {
     setProducts((prev) => prev.filter((p) => p.id !== product.id));
     setWishlistIds((prev) => prev.filter((id) => id !== product.id));
 
-    // 2. Persist in deleted IDs cache
-    try {
-      const deletedIds: number[] = JSON.parse(
-        localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-      );
-      if (!deletedIds.includes(product.id)) {
-        deletedIds.push(product.id);
-        localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(deletedIds));
-      }
-      const rawCustom = JSON.parse(
-        localStorage.getItem('ss_vastra_custom_products') || '[]'
-      );
-      const filteredCustom = rawCustom.filter((cp: any) => cp.id !== product.id);
-      localStorage.setItem('ss_vastra_custom_products', JSON.stringify(filteredCustom));
-    } catch {}
-
-    // 3. Inform server
+    // 2. Inform server API
     try {
       const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
       await fetch(`/api/admin/products/${product.id}`, {
@@ -435,18 +419,7 @@ export function App() {
       prev.map((p) => (p.id === updatedProduct.id ? updatedProduct : p))
     );
 
-    // 2. Local storage sync
-    try {
-      const rawCustom = JSON.parse(
-        localStorage.getItem('ss_vastra_custom_products') || '[]'
-      );
-      const idx = rawCustom.findIndex((cp: any) => cp.id === updatedProduct.id);
-      if (idx >= 0) rawCustom[idx] = updatedProduct;
-      else rawCustom.unshift(updatedProduct);
-      localStorage.setItem('ss_vastra_custom_products', JSON.stringify(rawCustom));
-    } catch {}
-
-    // 3. Server PUT sync
+    // 2. Server PUT sync
     try {
       const token = localStorage.getItem('ss_vastra_admin_token') || 'ssv_token_123456789';
       await fetch(`/api/admin/products/${updatedProduct.id}`, {
@@ -691,37 +664,10 @@ export function App() {
   };
 
   useEffect(() => {
-    // Self-healing: aggressively clear any demo products from legacy cache on startup
+    // Aggressively clear old local storage artifacts from legacy versions
     try {
-      const customRaw = localStorage.getItem('ss_vastra_custom_products');
-      if (customRaw) {
-        try {
-          const parsed = JSON.parse(customRaw);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(
-              (p: any) =>
-                !(
-                  p.isDemo === true ||
-                  (p.name && (
-                    p.name.includes('Red Embroidered') ||
-                    p.name.includes('Gulabi Pink') ||
-                    p.name.includes('Mint Green') ||
-                    p.name.includes('Peacock Blue') ||
-                    p.name.includes('Kesar Yellow') ||
-                    p.name.includes('Sanganer Heritage Wooden') ||
-                    p.name.includes('Peach Blossom') ||
-                    p.name.includes('Maroon Zardozi')
-                  ))
-                )
-            );
-            localStorage.setItem('ss_vastra_custom_products', JSON.stringify(clean));
-          } else {
-            localStorage.removeItem('ss_vastra_custom_products');
-          }
-        } catch {
-          localStorage.removeItem('ss_vastra_custom_products');
-        }
-      }
+      localStorage.removeItem('ss_vastra_custom_products');
+      localStorage.removeItem('ss_vastra_deleted_product_ids');
     } catch {}
 
     const verifyServerAdmin = async () => {
@@ -829,69 +775,20 @@ export function App() {
       const data = await res.json();
       let list: Product[] = [];
 
-      if (data.success && Array.isArray(data.products)) {
+      if (data.success && Array.isArray(data.products) && data.products.length > 0) {
         list = sanitizeProductList(data.products);
-        // Clear any stale deleted IDs from local storage that server confirms are active
-        try {
-          const activeIds = new Set(list.map((p) => p.id));
-          const deletedIds: number[] = JSON.parse(
-            localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-          );
-          const validDeletedIds = deletedIds.filter((id) => !activeIds.has(id));
-          localStorage.setItem('ss_vastra_deleted_product_ids', JSON.stringify(validDeletedIds));
-        } catch {}
-      }
-
-      const deletedIds: number[] = JSON.parse(
-        localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-      );
-
-      // Fallback to boutique outfits if server returned empty
-      if (list.length === 0) {
+      } else {
+        // Fallback to boutique outfits if server returned empty
         list = getDefaultProducts();
       }
-
-      // Merge newly added custom products only if not in deleted IDs
-      try {
-        const rawCustom = JSON.parse(
-          localStorage.getItem('ss_vastra_custom_products') || '[]'
-        );
-        const customProds: Product[] = sanitizeProductList(rawCustom).filter(
-          (cp) => !deletedIds.includes(cp.id)
-        );
-        for (const cp of customProds) {
-          const idx = list.findIndex((p) => p.id === cp.id);
-          if (idx >= 0) {
-            list[idx] = { ...list[idx], ...cp };
-          } else {
-            list.unshift(cp);
-          }
-        }
-      } catch {}
 
       const cleanList = sanitizeProductList(list);
       setProducts(cleanList);
       handleParseDeepLink(cleanList, categories);
     } catch {
-      // In case of network error, fallback safely while respecting deleted IDs
-      try {
-        const deletedIds: number[] = JSON.parse(
-          localStorage.getItem('ss_vastra_deleted_product_ids') || '[]'
-        );
-        let fallbackList: Product[] = deletedIds.includes(1) ? [] : getDefaultProducts();
-        const rawCustom = JSON.parse(
-          localStorage.getItem('ss_vastra_custom_products') || '[]'
-        );
-        const customProds: Product[] = sanitizeProductList(rawCustom).filter(
-          (cp) => !deletedIds.includes(cp.id)
-        );
-        for (const cp of customProds) {
-          const idx = fallbackList.findIndex((p) => p.id === cp.id);
-          if (idx >= 0) fallbackList[idx] = { ...fallbackList[idx], ...cp };
-          else fallbackList.unshift(cp);
-        }
-        setProducts(sanitizeProductList(fallbackList));
-      } catch {}
+      // In case of network error, fallback safely to default boutique outfits
+      const fallbackList = getDefaultProducts();
+      setProducts(sanitizeProductList(fallbackList));
     }
   };
 

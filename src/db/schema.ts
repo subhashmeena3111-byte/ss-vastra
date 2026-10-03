@@ -1,7 +1,7 @@
 import { pgTable, serial, text, integer, boolean, timestamp } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
-// 1. Users table (Customer accounts linked with Firebase Auth or Guest)
+// 1. Users table (Customer accounts linked with Auth or Guest tokens)
 export const users = pgTable('users', {
   id: serial('id').primaryKey(),
   uid: text('uid').notNull().unique(), // Firebase UID or guest session token
@@ -12,7 +12,24 @@ export const users = pgTable('users', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// 2. Admins table (Super Admin & Staff with bcrypt hash and lockouts)
+// 2. Customers table (Dedicated customer records with order and spend metrics)
+export const customers = pgTable('customers', {
+  id: serial('id').primaryKey(),
+  name: text('name').notNull(),
+  phone: text('phone').notNull().unique(),
+  email: text('email'),
+  address: text('address'),
+  city: text('city'),
+  state: text('state'),
+  pincode: text('pincode'),
+  totalOrders: integer('total_orders').notNull().default(0),
+  totalSpent: integer('total_spent').notNull().default(0),
+  notes: text('notes'),
+  createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
+});
+
+// 3. Admins table (Super Admin & Staff with bcrypt hash and lockouts)
 export const admins = pgTable('admins', {
   id: serial('id').primaryKey(),
   adminId: text('admin_id').notNull().unique(),
@@ -35,14 +52,14 @@ export const admins = pgTable('admins', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// 3. Roles & Permissions table
+// 4. Roles & Permissions table
 export const roles = pgTable('roles', {
   id: serial('id').primaryKey(),
   name: text('name').notNull().unique(), // 'super_admin', 'staff'
   permissions: text('permissions').notNull(), // JSON string array of permissions
 });
 
-// 4. Categories table
+// 5. Categories table
 export const categories = pgTable('categories', {
   id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -53,7 +70,7 @@ export const categories = pgTable('categories', {
   displayOrder: integer('display_order').default(0),
 });
 
-// 5. Products table
+// 6. Products table
 export const products = pgTable('products', {
   id: serial('id').primaryKey(),
   slug: text('slug').notNull().unique(),
@@ -76,9 +93,10 @@ export const products = pgTable('products', {
   isOutfit: boolean('is_outfit').default(false),
   isActive: boolean('is_active').default(true),
   createdAt: timestamp('created_at').defaultNow(),
+  updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// 6. Product Images table (Multi-image, reorderable, main image flag)
+// 7. Product Images table (Multi-image, reorderable, main image flag)
 export const productImages = pgTable('product_images', {
   id: serial('id').primaryKey(),
   productId: integer('product_id')
@@ -89,11 +107,12 @@ export const productImages = pgTable('product_images', {
   isMain: boolean('is_main').default(false),
 });
 
-// 7. Orders table
+// 8. Orders table
 export const orders = pgTable('orders', {
   id: serial('id').primaryKey(),
   orderNumber: text('order_number').notNull().unique(),
   userId: integer('user_id').references(() => users.id),
+  customerId: integer('customer_id').references(() => customers.id),
   customerName: text('customer_name').notNull(),
   customerPhone: text('customer_phone').notNull(),
   customerEmail: text('customer_email'),
@@ -104,7 +123,7 @@ export const orders = pgTable('orders', {
   totalAmount: integer('total_amount').notNull(),
   discountAmount: integer('discount_amount').default(0),
   couponCode: text('coupon_code'),
-  paymentMethod: text('payment_method').notNull(), // 'razorpay', 'cod'
+  paymentMethod: text('payment_method').notNull(), // 'razorpay', 'cod', 'upi'
   paymentStatus: text('payment_status').notNull().default('pending'), // 'pending', 'paid', 'failed', 'refunded'
   orderStatus: text('order_status').notNull().default('Placed'), // Placed, Confirmed, Packed, Shipped, Out for Delivery, Delivered, Cancelled, Returned
   notes: text('notes'),
@@ -112,7 +131,7 @@ export const orders = pgTable('orders', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// 8. Order Items table
+// 9. Order Items table
 export const orderItems = pgTable('order_items', {
   id: serial('id').primaryKey(),
   orderId: integer('order_id')
@@ -127,7 +146,22 @@ export const orderItems = pgTable('order_items', {
   totalPrice: integer('total_price').notNull(),
 });
 
-// 9. Payments table (Razorpay verification, signatures, and refunds)
+// 10. Reviews table
+export const reviews = pgTable('reviews', {
+  id: serial('id').primaryKey(),
+  productId: integer('product_id').references(() => products.id, { onDelete: 'cascade' }),
+  productName: text('product_name'),
+  author: text('author').notNull(),
+  city: text('city').default('Jaipur'),
+  rating: integer('rating').notNull().default(5),
+  title: text('title'),
+  comment: text('comment').notNull(),
+  isVerified: boolean('is_verified').default(true),
+  isApproved: boolean('is_approved').default(true),
+  createdAt: timestamp('created_at').defaultNow(),
+});
+
+// 11. Payments table (Razorpay verification, signatures, and refunds)
 export const payments = pgTable('payments', {
   id: serial('id').primaryKey(),
   orderId: integer('order_id')
@@ -144,7 +178,7 @@ export const payments = pgTable('payments', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// 10. Shipments & Delivery Tracking table
+// 12. Shipments & Delivery Tracking table
 export const shipments = pgTable('shipments', {
   id: serial('id').primaryKey(),
   orderId: integer('order_id')
@@ -160,7 +194,7 @@ export const shipments = pgTable('shipments', {
   updatedAt: timestamp('updated_at').defaultNow(),
 });
 
-// 11. Coupons table
+// 13. Coupons table
 export const coupons = pgTable('coupons', {
   id: serial('id').primaryKey(),
   code: text('code').notNull().unique(),
@@ -172,7 +206,7 @@ export const coupons = pgTable('coupons', {
   expiryDate: text('expiry_date'),
 });
 
-// 12. Banners table (Hero banners & category promotions)
+// 14. Banners table (Hero banners & category promotions)
 export const banners = pgTable('banners', {
   id: serial('id').primaryKey(),
   title: text('title').notNull(),
@@ -184,7 +218,7 @@ export const banners = pgTable('banners', {
   displayOrder: integer('display_order').default(0),
 });
 
-// 13. Activity Logs table (Audit trail: who changed what and when)
+// 15. Activity Logs table (Audit trail: who changed what and when)
 export const activityLogs = pgTable('activity_logs', {
   id: serial('id').primaryKey(),
   adminId: text('admin_id').notNull(),
@@ -198,7 +232,7 @@ export const activityLogs = pgTable('activity_logs', {
   createdAt: timestamp('created_at').defaultNow(),
 });
 
-// 14. Settings table (Store config, COD toggle, shipping charges, contact info)
+// 16. Settings table (Store config, COD toggle, shipping charges, contact info)
 export const settings = pgTable('settings', {
   id: serial('id').primaryKey(),
   key: text('key').notNull().unique(),
@@ -210,6 +244,7 @@ export const settings = pgTable('settings', {
 export const productsRelations = relations(products, ({ many }) => ({
   images: many(productImages),
   orderItems: many(orderItems),
+  reviews: many(reviews),
 }));
 
 export const productImagesRelations = relations(productImages, ({ one }) => ({
@@ -219,10 +254,25 @@ export const productImagesRelations = relations(productImages, ({ one }) => ({
   }),
 }));
 
+export const customersRelations = relations(customers, ({ many }) => ({
+  orders: many(orders),
+}));
+
+export const reviewsRelations = relations(reviews, ({ one }) => ({
+  product: one(products, {
+    fields: [reviews.productId],
+    references: [products.id],
+  }),
+}));
+
 export const ordersRelations = relations(orders, ({ one, many }) => ({
   user: one(users, {
     fields: [orders.userId],
     references: [users.id],
+  }),
+  customer: one(customers, {
+    fields: [orders.customerId],
+    references: [customers.id],
   }),
   items: many(orderItems),
   payment: many(payments),

@@ -1,51 +1,82 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 
 interface ReviewsSliderProps {
   onViewProduct?: (productId: number) => void;
 }
 
-export const ReviewsSlider: React.FC<ReviewsSliderProps> = ({ onViewProduct }) => {
-  const reviews = [
-    {
-      productId: 12,
-      name: 'Ananya Sharma',
-      city: 'South Delhi',
-      product: 'Olive Green Floral Embroidered Kurta Set',
-      rating: 5,
-      review:
-        'The floral embroidery on the olive green suit is exquisite. The neckline and dupatta lace finishing are high boutique grade. Delivered to Delhi in just 3 days!',
-    },
-    {
-      productId: 11,
-      name: 'Dr. Meenakshi Iyer',
-      city: 'Indiranagar, Bengaluru',
-      product: 'Red & Beige Floral Pure Cotton Alia Cut Kurta Set',
-      rating: 5,
-      review:
-        'The Alia cut flair on this red floral suit gives such an elegant, flattering silhouette. Pure cotton is soft on the skin and breathable for long clinic hours.',
-    },
-    {
-      productId: 10,
-      name: 'Ritu Agarwal',
-      city: 'Malabar Hill, Mumbai',
-      product: 'Peach Mirror Work Pure Cotton Kurti & Pant Set',
-      rating: 5,
-      review:
-        'Subhash ji on WhatsApp helped me choose the exact chest size. The mirror work details on the peach set are gorgeous and look even better in person.',
-    },
-    {
-      productId: 9,
-      name: 'Pooja Choudhary',
-      city: 'Vaishali Nagar, Jaipur',
-      product: 'Teal Blue Floral Print Straight Kurta Pant Set',
-      rating: 5,
-      review:
-        'Being from Jaipur, I know quality Sanganeri print and stitching. SS VASTRA’s teal set has crisp prints, neat seams, and didn’t shrink or bleed color in wash.',
-    },
-  ];
+interface ReviewItem {
+  id?: number;
+  productId?: number;
+  name: string;
+  city: string;
+  product: string;
+  rating: number;
+  review: string;
+}
 
+const DEFAULT_REVIEWS: ReviewItem[] = [
+  {
+    productId: 12,
+    name: 'Ananya Sharma',
+    city: 'South Delhi',
+    product: 'Olive Green Floral Embroidered Kurta Set',
+    rating: 5,
+    review:
+      'The floral embroidery on the olive green suit is exquisite. The neckline and dupatta lace finishing are high boutique grade. Delivered to Delhi in just 3 days!',
+  },
+  {
+    productId: 11,
+    name: 'Dr. Meenakshi Iyer',
+    city: 'Indiranagar, Bengaluru',
+    product: 'Red & Beige Floral Pure Cotton Alia Cut Kurta Set',
+    rating: 5,
+    review:
+      'The Alia cut flair on this red floral suit gives such an elegant, flattering silhouette. Pure cotton is soft on the skin and breathable for long clinic hours.',
+  },
+  {
+    productId: 10,
+    name: 'Ritu Agarwal',
+    city: 'Malabar Hill, Mumbai',
+    product: 'Peach Mirror Work Pure Cotton Kurti & Pant Set',
+    rating: 5,
+    review:
+      'Subhash ji on WhatsApp helped me choose the exact chest size. The mirror work details on the peach set are gorgeous and look even better in person.',
+  },
+  {
+    productId: 9,
+    name: 'Pooja Choudhary',
+    city: 'Vaishali Nagar, Jaipur',
+    product: 'Teal Blue Floral Print Straight Kurta Pant Set',
+    rating: 5,
+    review:
+      'Being from Jaipur, I know quality Sanganeri print and stitching. SS VASTRA’s teal set has crisp prints, neat seams, and didn’t shrink or bleed color in wash.',
+  },
+];
+
+export const ReviewsSlider: React.FC<ReviewsSliderProps> = ({ onViewProduct }) => {
+  const [reviews, setReviews] = useState<ReviewItem[]>(DEFAULT_REVIEWS);
   const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    fetch('/api/reviews')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.reviews) && data.reviews.length > 0) {
+          const mapped: ReviewItem[] = data.reviews.map((r: any) => ({
+            id: r.id,
+            productId: r.productId,
+            name: r.author,
+            city: r.city || 'Verified Buyer',
+            product: r.productName || 'Handcrafted Ethnic Outfit',
+            rating: Number(r.rating) || 5,
+            review: r.comment || r.title || 'Great fabric and fit.',
+          }));
+          setReviews(mapped);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const prevReview = () => {
     setCurrentIndex((prev) => (prev === 0 ? reviews.length - 1 : prev - 1));

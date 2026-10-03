@@ -19,6 +19,8 @@ import {
   activityLogs,
   settings,
   users,
+  customers,
+  reviews,
 } from './src/db/schema.ts';
 import { eq, desc, asc, and, or, sql } from 'drizzle-orm';
 import {
@@ -69,7 +71,13 @@ import {
   updateAdminRecord,
   logActivityRecord,
   getActivityLogsList,
+  getCustomersList,
+  upsertCustomerRecord,
+  getReviewsList,
+  createReviewRecord,
+  isDbReady,
 } from './src/db/repository.ts';
+import { uploadMediaToCloudStorage } from './src/lib/cloudStorage.ts';
 import { localStore } from './src/db/localStore.ts';
 import { triggerCloudSave } from './src/db/cloudSync.ts';
 
@@ -318,6 +326,41 @@ app.post('/api/coupons/validate', async (req: Request, res: Response) => {
   }
 });
 
+// Reviews - Public Storefront Read & Submit
+app.get('/api/reviews', async (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  try {
+    const productId = req.query.productId ? parseInt(req.query.productId as string, 10) : undefined;
+    const reviewList = await getReviewsList(productId);
+    res.json({ success: true, reviews: reviewList });
+  } catch (err: unknown) {
+    console.error('Fetch reviews error:', err);
+    res.json({ success: true, reviews: [] });
+  }
+});
+
+app.post('/api/reviews', async (req: Request, res: Response) => {
+  try {
+    const { productId, productName, author, city, rating, title, comment } = req.body;
+    if (!author || !comment) {
+      return res.status(400).json({ success: false, error: 'Author name aur review comment zaroori hain' });
+    }
+    const created = await createReviewRecord({
+      productId: productId ? Number(productId) : undefined,
+      productName: productName || undefined,
+      author: String(author).trim(),
+      city: city ? String(city).trim() : 'Jaipur',
+      rating: Math.min(5, Math.max(1, Number(rating) || 5)),
+      title: title ? String(title).trim() : undefined,
+      comment: String(comment).trim(),
+    });
+    res.json({ success: true, review: created });
+  } catch (err: unknown) {
+    console.error('Create review error:', err);
+    res.status(500).json({ success: false, error: 'Review submit karne me error aaya' });
+  }
+});
+
 // Safe Image Proxy for external images, Google Drive links, and fallbacks
 app.get('/api/image-proxy', async (req: Request, res: Response) => {
   const url = req.query.url as string;
@@ -434,7 +477,22 @@ app.post('/api/upload', async (req: Request, res: Response) => {
         const cleanName = rawName.includes('.') ? rawName : `${rawName}${ext}`;
         const safeFileName = `${Date.now()}_${cleanName}`;
 
-        // 1. Save to local or /tmp filesystem
+        // 1. Upload to Cloudinary or Supabase Storage if configured
+        try {
+          const cloudUpload = await uploadMediaToCloudStorage({
+            mediaPayload,
+            filename: safeFileName,
+            mimeType,
+            folder: isVideo ? 'ss-vastra/reels' : 'ss-vastra/products',
+          });
+          if (cloudUpload.success && (cloudUpload.provider === 'cloudinary' || cloudUpload.provider === 'supabase')) {
+            return res.json({ success: true, url: cloudUpload.url, provider: cloudUpload.provider });
+          }
+        } catch (cloudErr) {
+          console.warn('Cloud storage attempt warning:', cloudErr);
+        }
+
+        // 2. Save to local or /tmp filesystem
         let uploadsDir = path.join(process.cwd(), 'public', 'uploads');
         let written = false;
         try {
@@ -601,6 +659,22 @@ app.post('/api/orders/create', async (req: Request, res: Response) => {
         userId = newUser[0].id;
       }
     } catch {}
+
+    // Upsert customer record in PostgreSQL customers table
+    try {
+      await upsertCustomerRecord({
+        name: customerName,
+        phone: customerPhone,
+        email: customerEmail || undefined,
+        address: shippingAddress,
+        city: city || 'Jaipur',
+        state: state || 'Rajasthan',
+        pincode: pincode || '303905',
+        orderAmount: finalAmount,
+      });
+    } catch (custErr) {
+      console.warn('Customer upsert note:', custErr);
+    }
 
     // Insert order
     let createdOrder: any = null;
@@ -2091,6 +2165,22 @@ app.post(
 
       const created = await createOrderRecord(orderData, verifiedItems, initialShipment);
 
+      // Upsert customer in PostgreSQL customers table
+      try {
+        await upsertCustomerRecord({
+          name: customerName,
+          phone: orderData.customerPhone,
+          email: customerEmail || undefined,
+          address: shippingAddress,
+          city: city || 'Jaipur',
+          state: state || 'Rajasthan',
+          pincode: pincode || '303905',
+          orderAmount: orderData.totalAmount,
+        });
+      } catch (custErr) {
+        console.warn('Admin customer upsert note:', custErr);
+      }
+
       localStore.addCustomerActivity({
         type: 'order',
         phone: orderData.customerPhone,
@@ -3089,10 +3179,102 @@ app.get(
         }
       }
 
+      // 4. Merge customers table from PostgreSQL
+      try {
+        const dbCusts = await getCustomersList();
+        for (const dc of dbCusts) {
+          const cleanPhone = (dc.phone || '').replace(/\D/g, '').slice(-10);
+          if (!cleanPhone) continue;
+          if (!phoneMap.has(cleanPhone)) {
+            phoneMap.set(cleanPhone, {
+              id: dc.id,
+              name: dc.name,
+              phone: cleanPhone,
+              email: dc.email || '',
+              address: dc.address || '',
+              city: dc.city || '',
+              state: dc.state || '',
+              pincode: dc.pincode || '',
+              ordersCount: dc.totalOrders || 0,
+              totalSpent: dc.totalSpent || 0,
+              lastOrderDate: dc.updatedAt || dc.createdAt || null,
+              role: 'customer',
+              source: 'Customer Database',
+            });
+          } else {
+            const c = phoneMap.get(cleanPhone);
+            if (dc.name && (!c.name || c.name === 'Registered Shopper' || c.name === 'Mobile Shopper' || c.name === 'Valued Customer')) {
+              c.name = dc.name;
+            }
+            if (dc.email && !c.email) c.email = dc.email;
+            if (dc.address && !c.address) c.address = dc.address;
+            if (dc.totalOrders && dc.totalOrders > c.ordersCount) c.ordersCount = dc.totalOrders;
+            if (dc.totalSpent && dc.totalSpent > c.totalSpent) c.totalSpent = dc.totalSpent;
+          }
+        }
+      } catch (custDbErr) {
+        console.warn('Customer list DB merge note:', custDbErr);
+      }
+
       res.json({ success: true, customers: Array.from(phoneMap.values()) });
     } catch (err: unknown) {
       console.error('Admin customers error:', err);
       res.json({ success: true, customers: [] });
+    }
+  }
+);
+
+// Admin Reviews Management
+app.get(
+  '/api/admin/reviews',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (_req: AdminAuthRequest, res: Response) => {
+    try {
+      const list = await getReviewsList();
+      res.json({ success: true, reviews: list });
+    } catch (err: unknown) {
+      console.error('Admin reviews fetch error:', err);
+      res.status(500).json({ success: false, error: 'Failed to fetch reviews' });
+    }
+  }
+);
+
+app.post(
+  '/api/admin/reviews',
+  requireAdminAuth(['super_admin', 'staff']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const { productId, productName, author, city, rating, title, comment } = req.body;
+      const created = await createReviewRecord({
+        productId: productId ? Number(productId) : undefined,
+        productName,
+        author: author || 'Verified Shopper',
+        city: city || 'Jaipur',
+        rating: Number(rating) || 5,
+        title,
+        comment: comment || '',
+      });
+      res.json({ success: true, review: created });
+    } catch (err: unknown) {
+      console.error('Admin create review error:', err);
+      res.status(500).json({ success: false, error: 'Failed to create review' });
+    }
+  }
+);
+
+app.delete(
+  '/api/admin/reviews/:id',
+  requireAdminAuth(['super_admin']),
+  async (req: AdminAuthRequest, res: Response) => {
+    try {
+      const id = parseInt(req.params.id, 10);
+      if (await isDbReady()) {
+        await db.delete(reviews).where(eq(reviews.id, id));
+      }
+      res.json({ success: true, message: 'Review deleted successfully' });
+    } catch (err: unknown) {
+      console.error('Delete review error:', err);
+      res.status(500).json({ success: false, error: 'Failed to delete review' });
     }
   }
 );

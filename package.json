@@ -10,7 +10,9 @@
     "preview": "vite preview",
     "clean": "rm -rf dist server.js",
     "lint": "tsc --noEmit",
+    "seed": "tsx scripts/seed.ts",
     "seed:admin": "tsx scripts/seed-super-admin.ts",
+    "migrate:images": "tsx scripts/migrate-images-to-cloud.ts",
     "sync:git": "bash scripts/git-sync.sh"
   },
   "dependencies": {
