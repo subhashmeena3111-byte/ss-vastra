@@ -188,40 +188,28 @@ export const FloatingWhatsApp: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Buttons Bar */}
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-[#8A6218] hover:text-[#5C4010] text-[11px] font-bold shadow-lg border border-[#D4AF37]/60 backdrop-blur-xs transition-all duration-300 hover:scale-105 active:scale-95 cursor-pointer"
-          title="Direct help from Jaipur master stylists & tracking"
-        >
-          <Sparkles className="w-3.5 h-3.5 text-[#A87A2A]" />
-          <span>WhatsApp Helpline (2+ Numbers)</span>
-        </button>
-
-        {/* Main Floating Bubble */}
-        <button
-          type="button"
-          onClick={() => setIsOpen(!isOpen)}
-          className="relative flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 border-2 border-white/80 animate-whatsapp-pulse cursor-pointer"
-          aria-label="Order or Chat on WhatsApp"
-        >
-          <div className="relative">
-            <MessageCircle className="w-6 h-6 fill-current" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-300 rounded-full animate-ping" />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
-          </div>
-          <div className="text-left hidden sm:block">
-            <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-100">
-              Jaipur Support
-            </span>
-            <span className="block text-xs font-bold leading-tight">
-              {isOpen ? 'Close Helpline' : 'Chat on WhatsApp'}
-            </span>
-          </div>
-        </button>
-      </div>
+      {/* Main Single Floating Bubble with Safe-Area Padding */}
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="relative flex items-center gap-2.5 bg-emerald-600 hover:bg-emerald-700 text-white pl-4 pr-5 py-3 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 border-2 border-white/80 animate-whatsapp-pulse cursor-pointer"
+        aria-label="Order or Chat on WhatsApp"
+        title="Chat with SS VASTRA Jaipur Helpline"
+      >
+        <div className="relative">
+          <MessageCircle className="w-6 h-6 fill-current" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-300 rounded-full animate-ping" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
+        </div>
+        <div className="text-left hidden sm:block">
+          <span className="block text-[10px] font-bold uppercase tracking-wider text-emerald-100">
+            Jaipur Support
+          </span>
+          <span className="block text-xs font-bold leading-tight">
+            {isOpen ? 'Close Helpline' : 'Chat on WhatsApp'}
+          </span>
+        </div>
+      </button>
     </div>
   );
 };

@@ -90,12 +90,14 @@ interface AdminPortalProps {
   isOpen: boolean;
   onClose: () => void;
   onProductsUpdated?: () => void;
+  initialProducts?: Product[];
 }
 
 export const AdminPortal: React.FC<AdminPortalProps> = ({
   isOpen,
   onClose,
   onProductsUpdated,
+  initialProducts = [],
 }) => {
   const [token, setToken] = useState<string | null>(() => {
     try {
@@ -124,6 +126,11 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   const [authView, setAuthView] = useState<
     'login' | 'forgot_password' | 'reset_password' | 'set_staff_password'
   >('login');
+
+  // Demo Data Enabled Flag (default false in production, enabled only via env)
+  const isDemoEnabled =
+    (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ENABLE_DEMO === 'true') ||
+    (typeof process !== 'undefined' && (process.env?.NEXT_PUBLIC_ENABLE_DEMO === 'true' || process.env?.VITE_ENABLE_DEMO === 'true'));
 
   // Login Form States
   const [loginEmail, setLoginEmail] = useState('');
@@ -162,7 +169,13 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
   // Data states
   const [dashboardMetrics, setDashboardMetrics] = useState<Record<string, unknown> | null>(null);
   const [ordersList, setOrdersList] = useState<Order[]>([]);
-  const [productsList, setProductsList] = useState<Product[]>([]);
+  const [productsList, setProductsList] = useState<Product[]>(() => initialProducts || []);
+
+  useEffect(() => {
+    if (initialProducts && initialProducts.length > 0 && productsList.length === 0) {
+      setProductsList(initialProducts);
+    }
+  }, [initialProducts]);
   const [customersList, setCustomersList] = useState<Record<string, unknown>[]>([]);
   const [couponsList, setCouponsList] = useState<Coupon[]>([]);
   const [salesReports, setSalesReports] = useState<Record<string, unknown> | null>(null);
@@ -1017,9 +1030,20 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
       const headers = { Authorization: `Bearer ${token}` };
 
       if (tab === 'dashboard') {
-        const res = await fetch('/api/admin/dashboard', { headers });
-        const d = await res.json();
-        if (d.success) setDashboardMetrics(d.metrics);
+        const [dashRes, prodsRes, ordersRes] = await Promise.allSettled([
+          fetch('/api/admin/dashboard', { headers }).then((r) => r.json()),
+          fetch('/api/admin/products', { headers }).then((r) => r.json()),
+          fetch('/api/admin/orders', { headers }).then((r) => r.json()),
+        ]);
+        if (dashRes.status === 'fulfilled' && dashRes.value?.success) {
+          setDashboardMetrics(dashRes.value.metrics);
+        }
+        if (prodsRes.status === 'fulfilled' && prodsRes.value?.success && Array.isArray(prodsRes.value.products)) {
+          setProductsList(prodsRes.value.products);
+        }
+        if (ordersRes.status === 'fulfilled' && ordersRes.value?.success && Array.isArray(ordersRes.value.orders)) {
+          setOrdersList(ordersRes.value.orders);
+        }
       } else if (tab === 'orders') {
         const res = await fetch('/api/admin/orders', { headers });
         const d = await res.json();
@@ -3560,17 +3584,19 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                 <span>Images & Banners</span>
               </button>
 
-              <button
-                onClick={() => setActiveTab('data_manager')}
-                className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
-                  activeTab === 'data_manager'
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'hover:bg-stone-800 hover:text-white text-amber-300'
-                }`}
-              >
-                <Database className="w-4 h-4 text-amber-400" />
-                <span className="font-bold">Demo Data Manager</span>
-              </button>
+              {isDemoEnabled && (
+                <button
+                  onClick={() => setActiveTab('data_manager')}
+                  className={`flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors ${
+                    activeTab === 'data_manager'
+                      ? 'bg-amber-600 text-white shadow-xs'
+                      : 'hover:bg-stone-800 hover:text-white text-amber-300'
+                  }`}
+                >
+                  <Database className="w-4 h-4 text-amber-400" />
+                  <span className="font-bold">Demo Data Manager</span>
+                </button>
+              )}
 
               <button
                 onClick={() => setActiveTab('receipts')}
@@ -3840,12 +3866,256 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                             Active Catalog
                           </span>
                           <span className="font-serif text-2xl font-bold text-emerald-700 block mt-1">
-                            {productsList.length}
+                            {(dashboardMetrics as { totalProductsCount?: number })?.totalProductsCount ?? (productsList.length > 0 ? productsList.length : (initialProducts?.length || 0))}
                           </span>
                           <span className="text-[10px] text-stone-400 mt-1 block">
                             Available in storefront
                           </span>
                         </div>
+                      </div>
+
+                      {/* 7-Day Revenue & Performance Chart */}
+                      <div className="p-5 rounded-2xl bg-white border border-[#E9A9BB]/40 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-serif text-lg font-bold text-[#2B2320]">
+                              7-Day Revenue Performance
+                            </h3>
+                            <p className="text-xs text-stone-500">Daily sales trend over the past week</p>
+                          </div>
+                          <span className="text-xs font-bold text-[#A87A2A] bg-[#F7E3E8] px-2.5 py-1 rounded-full border border-[#E9A9BB]/50">
+                            ₹{ordersList.slice(-7).reduce((acc, curr) => acc + (curr.totalAmount || 0), 0).toLocaleString('en-IN')} Week Sales
+                          </span>
+                        </div>
+
+                        {/* Chart Bars */}
+                        {(() => {
+                          const days = Array.from({ length: 7 }, (_, i) => {
+                            const d = new Date();
+                            d.setDate(d.getDate() - (6 - i));
+                            const dateStr = d.toISOString().split('T')[0];
+                            const dayName = d.toLocaleDateString('en-IN', { weekday: 'short' });
+                            const dayOrders = ordersList.filter((o) => (o.createdAt || '').startsWith(dateStr));
+                            const rev = dayOrders.reduce((acc, curr) => acc + (curr.totalAmount || 0), 0);
+                            return { dateStr, dayName, rev, count: dayOrders.length };
+                          });
+                          const maxRev = Math.max(...days.map((d) => d.rev), 1000);
+
+                          return (
+                            <div className="grid grid-cols-7 gap-2 pt-4 items-end h-44 border-b border-stone-200 pb-2">
+                              {days.map((d, idx) => {
+                                const heightPercent = Math.max(8, Math.round((d.rev / maxRev) * 100));
+                                return (
+                                  <div key={idx} className="flex flex-col items-center gap-1.5 h-full justify-end group">
+                                    <span className="text-[10px] font-bold text-stone-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      ₹{d.rev}
+                                    </span>
+                                    <div
+                                      style={{ height: `${heightPercent}%` }}
+                                      className={`w-full max-w-[40px] rounded-t-lg transition-all duration-500 ${
+                                        d.rev > 0 ? 'bg-gradient-to-t from-[#A87A2A] to-[#D4AF37] shadow-xs' : 'bg-stone-100'
+                                      }`}
+                                    />
+                                    <span className="text-[11px] font-medium text-stone-600">
+                                      {d.dayName}
+                                    </span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          );
+                        })()}
+                      </div>
+
+                      {/* Low-Stock Alerts */}
+                      {(() => {
+                        const lowStock = productsList.filter((p) => p.isActive !== false && p.stock !== undefined && p.stock <= 10);
+                        return (
+                          <div className="p-5 rounded-2xl bg-white border border-[#E9A9BB]/40 shadow-xs space-y-3">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <AlertCircle className={`w-4 h-4 ${lowStock.length > 0 ? 'text-amber-600' : 'text-emerald-600'}`} />
+                                <h3 className="font-serif text-lg font-bold text-[#2B2320]">
+                                  Inventory & Stock Alerts
+                                </h3>
+                              </div>
+                              <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${lowStock.length > 0 ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                {lowStock.length > 0 ? `${lowStock.length} Low-Stock Outfits` : 'Stock Healthy (✓)'}
+                              </span>
+                            </div>
+
+                            {lowStock.length > 0 ? (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-2">
+                                {lowStock.map((prod) => (
+                                  <div
+                                    key={prod.id}
+                                    className="p-3 rounded-xl border border-amber-200 bg-amber-50/40 flex items-center justify-between gap-3"
+                                  >
+                                    <div className="flex items-center gap-2.5 min-w-0">
+                                      <div className="w-10 h-10 rounded-lg overflow-hidden bg-stone-100 shrink-0">
+                                        <img
+                                          src={prod.image}
+                                          alt={prod.name}
+                                          className="w-full h-full object-cover"
+                                          onError={(e) => {
+                                            e.currentTarget.src = 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=400&q=80';
+                                          }}
+                                        />
+                                      </div>
+                                      <div className="truncate">
+                                        <p className="text-xs font-bold text-[#2B2320] truncate">{prod.name}</p>
+                                        <span className="text-[11px] font-semibold text-rose-700">
+                                          Only {prod.stock} units left
+                                        </span>
+                                      </div>
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setActiveTab('products');
+                                        setEditingProduct(prod);
+                                        setShowProductForm(true);
+                                      }}
+                                      className="px-2.5 py-1 rounded-lg bg-[#A87A2A] hover:bg-[#8e6520] text-white text-[11px] font-bold shrink-0 transition-colors cursor-pointer"
+                                    >
+                                      Restock
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className="text-xs text-stone-500 py-1">
+                                Sabhi outfits me paryapt stock upalabdha hai. Jab kisi outfit ka stock 10 se kam hoga, woh yahan alert ke roop me dikhega.
+                              </p>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {/* Recent Orders Table with Empty State */}
+                      <div className="p-5 rounded-2xl bg-white border border-[#E9A9BB]/40 shadow-xs space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h3 className="font-serif text-lg font-bold text-[#2B2320]">
+                              Recent Customer Orders
+                            </h3>
+                            <p className="text-xs text-stone-500">Latest online and COD bookings</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => setActiveTab('orders')}
+                            className="text-xs font-bold text-[#A87A2A] hover:underline cursor-pointer"
+                          >
+                            View All ({ordersList.length}) →
+                          </button>
+                        </div>
+
+                        {ordersList.length === 0 ? (
+                          <div className="py-10 text-center rounded-2xl bg-[#FBF7F0] border border-dashed border-[#E9A9BB]/60 space-y-3">
+                            <Package className="w-10 h-10 text-stone-400 mx-auto stroke-1" />
+                            <div>
+                              <h4 className="font-serif text-base font-bold text-[#2B2320]">
+                                No Customer Orders Yet
+                              </h4>
+                              <p className="text-xs text-stone-500 max-w-sm mx-auto mt-1">
+                                When customers place orders via COD or Razorpay payment gateway on the storefront, orders will appear here automatically.
+                              </p>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setActiveTab('orders');
+                                setNewOrderForm({
+                                  customerName: '',
+                                  customerPhone: '',
+                                  customerEmail: '',
+                                  shippingAddress: '',
+                                  city: 'Jaipur',
+                                  state: 'Rajasthan',
+                                  pincode: '303905',
+                                  totalAmount: 1999,
+                                  discountAmount: 0,
+                                  paymentMethod: 'cod',
+                                  paymentStatus: 'pending',
+                                  orderStatus: 'Confirmed',
+                                  notes: '',
+                                  courierPartner: 'Delhivery Express',
+                                  trackingNumber: '',
+                                  itemName: 'Royal Handblock Anarkali Set',
+                                  itemSize: 'M',
+                                  itemQuantity: 1,
+                                  itemPrice: 1999,
+                                });
+                                setShowAddOrderModal(true);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold shadow-xs cursor-pointer transition-colors"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>+ Create Manual Order</span>
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="overflow-x-auto rounded-xl border border-stone-200">
+                            <table className="w-full text-left text-xs">
+                              <thead className="bg-[#FAF5EE] text-stone-600 font-bold uppercase tracking-wider text-[10px] border-b border-stone-200">
+                                <tr>
+                                  <th className="px-3.5 py-2.5">Order ID</th>
+                                  <th className="px-3.5 py-2.5">Customer</th>
+                                  <th className="px-3.5 py-2.5">Amount</th>
+                                  <th className="px-3.5 py-2.5">Payment</th>
+                                  <th className="px-3.5 py-2.5">Status</th>
+                                  <th className="px-3.5 py-2.5">Date</th>
+                                  <th className="px-3.5 py-2.5 text-right">Action</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-stone-100">
+                                {ordersList.slice(0, 5).map((order) => (
+                                  <tr key={order.id} className="hover:bg-stone-50 transition-colors">
+                                    <td className="px-3.5 py-2.5 font-mono font-bold text-[#A87A2A]">
+                                      #{order.id}
+                                    </td>
+                                    <td className="px-3.5 py-2.5">
+                                      <p className="font-semibold text-stone-900">{order.customerName}</p>
+                                      <p className="text-[10px] text-stone-500">{order.customerPhone}</p>
+                                    </td>
+                                    <td className="px-3.5 py-2.5 font-bold text-stone-900">
+                                      ₹{(order.totalAmount || 0).toLocaleString('en-IN')}
+                                    </td>
+                                    <td className="px-3.5 py-2.5">
+                                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                                        order.paymentStatus === 'paid'
+                                          ? 'bg-emerald-100 text-emerald-800'
+                                          : 'bg-amber-100 text-amber-800'
+                                      }`}>
+                                        {order.paymentMethod?.toUpperCase() || 'COD'} ({order.paymentStatus})
+                                      </span>
+                                    </td>
+                                    <td className="px-3.5 py-2.5">
+                                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-stone-100 text-stone-700">
+                                        {order.orderStatus || 'Confirmed'}
+                                      </span>
+                                    </td>
+                                    <td className="px-3.5 py-2.5 text-stone-500 text-[11px]">
+                                      {order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-IN') : 'Recent'}
+                                    </td>
+                                    <td className="px-3.5 py-2.5 text-right">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setActiveTab('orders');
+                                          setViewingOrder(order);
+                                        }}
+                                        className="text-[#A87A2A] hover:underline font-bold text-xs cursor-pointer"
+                                      >
+                                        Manage →
+                                      </button>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -4271,7 +4541,7 @@ export const AdminPortal: React.FC<AdminPortalProps> = ({
                   )}
 
                   {/* TAB: DEMO DATA MANAGER & PURGE CONTROLS */}
-                  {activeTab === 'data_manager' && (
+                  {activeTab === 'data_manager' && isDemoEnabled && (
                     <AdminDataManager
                       token={token}
                       products={productsList}

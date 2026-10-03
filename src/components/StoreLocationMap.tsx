@@ -22,6 +22,21 @@ export const StoreLocationMap: React.FC<StoreLocationMapProps> = ({
   const [distanceKm, setDistanceKm] = useState<number | null>(null);
   const [isLocating, setIsLocating] = useState(false);
 
+  // Boutique Hours in IST (10:00 AM - 8:30 PM IST)
+  const isStoreOpen = React.useMemo(() => {
+    try {
+      const now = new Date();
+      const utcTime = now.getTime() + now.getTimezoneOffset() * 60000;
+      const istTime = new Date(utcTime + 3600000 * 5.5);
+      const hours = istTime.getHours();
+      const minutes = istTime.getMinutes();
+      const totalMinutes = hours * 60 + minutes;
+      return totalMinutes >= 600 && totalMinutes < 1230;
+    } catch {
+      return true;
+    }
+  }, []);
+
   // Calculate distance between user and SS VASTRA store
   const handleGetDirections = () => {
     if (!navigator.geolocation) {
@@ -78,10 +93,21 @@ export const StoreLocationMap: React.FC<StoreLocationMapProps> = ({
           <div className="lg:col-span-5 bg-white rounded-3xl p-6 sm:p-8 shadow-sm border border-[#E9A9BB]/40 flex flex-col justify-between">
             <div>
               <div className="flex items-center gap-2 mb-4">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-semibold text-emerald-700 tracking-wide uppercase">
-                  Flagship Store Open Now
-                </span>
+                {isStoreOpen ? (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                    <span className="text-xs font-semibold text-emerald-700 tracking-wide uppercase">
+                      Flagship Store Open Now (Closes 8:30 PM IST)
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <span className="w-2.5 h-2.5 rounded-full bg-stone-400" />
+                    <span className="text-xs font-semibold text-stone-500 tracking-wide uppercase">
+                      Closed – opens at 10:00 AM
+                    </span>
+                  </>
+                )}
               </div>
 
               <h3 className="font-serif text-2xl font-bold text-[#2B2320]">

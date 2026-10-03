@@ -33,10 +33,11 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
 
-  // Fallback initial sample reels (9:16 vertical videos)
+  // Vertical reels linked directly to actual products 9, 10, 11, 12
   const defaultReels: VideoReel[] = [
     {
       id: 1,
+      productId: 9,
       title: 'Royal Anarkali Handblock Drape',
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-fashion-model-in-an-orange-dress-41130-large.mp4',
       posterUrl: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&q=80&w=800',
@@ -49,6 +50,7 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
     },
     {
       id: 2,
+      productId: 10,
       title: 'Jaipur Handcrafted Farshi Suit Fit',
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-woman-posing-in-a-white-dress-and-a-hat-41133-large.mp4',
       posterUrl: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&q=80&w=800',
@@ -61,6 +63,7 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
     },
     {
       id: 3,
+      productId: 11,
       title: 'Festive Banarasi & Zari Elegance',
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-young-woman-with-curly-hair-posing-41135-large.mp4',
       posterUrl: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&q=80&w=800',
@@ -73,6 +76,7 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
     },
     {
       id: 4,
+      productId: 12,
       title: 'Mustard Cotton Kurti Flare Look',
       videoUrl: 'https://assets.mixkit.co/videos/preview/mixkit-model-posing-in-a-leather-jacket-41134-large.mp4',
       posterUrl: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&q=80&w=800',
@@ -269,6 +273,7 @@ export const VideoReelsSection: React.FC<VideoReelsSectionProps> = ({
                   }}
                   src={normalizeVideoUrl(reel.videoUrl)}
                   poster={reel.posterUrl ? normalizeProductImageUrl(reel.posterUrl) : undefined}
+                  preload="none"
                   loop
                   playsInline
                   muted={isMuted}

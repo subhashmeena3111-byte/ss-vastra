@@ -1,4 +1,4 @@
-﻿{
+{
     "categories":  [
                        {
                            "name":  "Kurta Sets",
@@ -50,13 +50,13 @@
                            "slug":  "fabrics",
                            "icon":  "🧵",
                            "id":  6,
-                           "image":  "https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format\u0026fit=crop\u0026w=600\u0026q=80",
+                           "image":  "https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format\u0026fit=crop\u0026w=600\u0026q=80",
                            "name":  "Fabrics",
                            "description":  "Direct from Sanganer master wooden handblock cambric \u0026 mulmul cotton."
                        },
                        {
                            "description":  "Freshly loomed designs and latest seasonal silhouettes.",
-                           "image":  "https://images.unsplash.com/photo-1544441893-675973e31985?auto=format\u0026fit=crop\u0026w=600\u0026q=80",
+                           "image":  "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format\u0026fit=crop\u0026w=600\u0026q=80",
                            "displayOrder":  7,
                            "name":  "New Arrivals",
                            "icon":  "🌟",
@@ -350,7 +350,7 @@
                      "store_name":  "SS VASTRA",
                      "shipping_fee":  "0",
                      "whatsapp":  "https://wa.me/919783770735",
-                     "email":  "subhashmeena3111@gmail.com",
+                     "email":  "contact@ssvastra.com",
                      "upi_qr_image":  "https://api.qrserver.com/v1/create-qr-code/?size=300x300\u0026data=upi%3A%2F%2Fpay%3Fpa%3D9783770735%40upi%26pn%3DSS%2520VASTRA%2520JAIPUR%26cu%3DINR",
                      "phone":  "9783770735",
                      "tagline":  "Elegance in Every Thread",

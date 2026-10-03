@@ -20,12 +20,14 @@ interface ContactModalProps {
   isOpen: boolean;
   onClose: () => void;
   onScrollToMap?: () => void;
+  businessEmail?: string;
 }
 
 export const ContactModal: React.FC<ContactModalProps> = ({
   isOpen,
   onClose,
   onScrollToMap,
+  businessEmail = 'contact@ssvastra.com',
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -182,13 +184,13 @@ export const ContactModal: React.FC<ContactModalProps> = ({
               </a>
 
               <a
-                href="mailto:subhashmeena3111@gmail.com"
+                href={`mailto:${businessEmail}`}
                 className="flex items-center gap-3 p-2.5 rounded-xl bg-[#FBF7F0] hover:bg-[#F7E3E8]/50 border border-[#E9A9BB]/40 text-[#2B2320] transition-colors font-semibold"
               >
                 <Mail className="w-4 h-4 text-[#A87A2A] shrink-0" />
                 <div className="text-left">
                   <div className="text-[10px] text-stone-500 uppercase font-bold">Email Support</div>
-                  <div className="text-xs">subhashmeena3111@gmail.com</div>
+                  <div className="text-xs">{businessEmail}</div>
                 </div>
               </a>
 

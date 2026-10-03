@@ -90,33 +90,45 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           }}
         />
 
-        {/* Product Badges (Discount, Spotlight, Outfit, New, Best Seller) */}
-        <div className="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1 z-30 pointer-events-auto max-w-[70%]">
-          {discount > 0 && (
-            <span className="bg-[#A87A2A] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full shadow-xs">
-              {discount}% OFF
-            </span>
-          )}
-          {(product.isSpotlight || product.isFeatured) && (
-            <span className="bg-amber-600 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
-              ⭐ Spotlight
-            </span>
-          )}
-          {product.isOutfit && (
-            <span className="bg-pink-700 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
-              👗 Outfit
-            </span>
-          )}
-          {product.isNewArrival && (
-            <span className="bg-emerald-700 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
-              🌟 New
-            </span>
-          )}
-          {product.isBestSeller && (
-            <span className="bg-rose-700 text-white text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-xs">
-              🔥 Best
-            </span>
-          )}
+        {/* Product Badges (Max 2 separate badges per card) */}
+        <div className="absolute top-2.5 left-2.5 flex flex-wrap items-center gap-1 z-30 pointer-events-auto max-w-[75%]">
+          {(() => {
+            const badgesList: { key: string; label: string; className: string }[] = [];
+            if (discount > 0) {
+              badgesList.push({
+                key: 'discount',
+                label: `${discount}% OFF`,
+                className: 'bg-[#A87A2A] text-white',
+              });
+            }
+            if (product.isSpotlight || product.isFeatured) {
+              badgesList.push({
+                key: 'spotlight',
+                label: '⭐ Spotlight',
+                className: 'bg-amber-600 text-white',
+              });
+            } else if (product.isNewArrival) {
+              badgesList.push({
+                key: 'new',
+                label: '🌟 New',
+                className: 'bg-emerald-700 text-white',
+              });
+            } else if (product.isBestSeller) {
+              badgesList.push({
+                key: 'bestseller',
+                label: '🔥 Best',
+                className: 'bg-rose-700 text-white',
+              });
+            }
+            return badgesList.slice(0, 2).map((b) => (
+              <span
+                key={b.key}
+                className={`${b.className} text-[9px] sm:text-[10px] font-bold px-2 py-0.5 rounded-full shadow-xs`}
+              >
+                {b.label}
+              </span>
+            ));
+          })()}
           {isAdmin && (onEditProduct || onDeleteProduct) && (
             <div className="flex items-center gap-1 mt-0.5">
               {onEditProduct && (

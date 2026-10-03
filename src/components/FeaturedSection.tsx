@@ -1,5 +1,5 @@
-import React from 'react';
-import { Sparkles, CheckCircle2, ShoppingBag, MessageCircle, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Sparkles, CheckCircle2, ShoppingBag, MessageCircle, AlertCircle } from 'lucide-react';
 import { Product } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
 import { normalizeProductHighlights } from '../utils/productUtils.ts';
@@ -18,16 +18,50 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
   if (!product) return null;
 
   const featuredProduct = product;
+  const [selectedSize, setSelectedSize] = useState<string>('');
+  const [sizeError, setSizeError] = useState(false);
+  const [addedToast, setAddedToast] = useState(false);
+
+  const availableSizes =
+    featuredProduct.sizes && featuredProduct.sizes.length > 0
+      ? featuredProduct.sizes
+      : ['S', 'M', 'L', 'XL', 'XXL'];
+
+  const discountPercent =
+    featuredProduct.discountPercent ||
+    (featuredProduct.originalPrice > featuredProduct.price
+      ? Math.round(
+          ((featuredProduct.originalPrice - featuredProduct.price) /
+            featuredProduct.originalPrice) *
+            100
+        )
+      : 0);
+
+  const savings =
+    featuredProduct.originalPrice > featuredProduct.price
+      ? featuredProduct.originalPrice - featuredProduct.price
+      : 0;
 
   const handleWhatsApp = () => {
-    const msg = `Namaste SS VASTRA! Main yeh signature outfit order karna chahti hu:\n*${featuredProduct.name}*\nPrice: ₹${featuredProduct.price}`;
+    const sizeNote = selectedSize ? ` (Size: ${selectedSize})` : '';
+    const msg = `Namaste SS VASTRA! Main yeh signature outfit order karna chahti hu:\n*${featuredProduct.name}*${sizeNote}\nPrice: ₹${featuredProduct.price}`;
     window.open(`https://wa.me/919783770735?text=${encodeURIComponent(msg)}`, '_blank');
+  };
+
+  const handleAdd = () => {
+    if (!selectedSize) {
+      setSizeError(true);
+      return;
+    }
+    setSizeError(false);
+    onAddToCart(featuredProduct, selectedSize);
+    setAddedToast(true);
+    setTimeout(() => setAddedToast(false), 2000);
   };
 
   return (
     <section className="py-12 sm:py-16 bg-gradient-to-b from-[#FBF7F0] via-[#F7E3E8]/30 to-[#FBF7F0] border-y border-[#E9A9BB]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#F7E3E8] border border-[#E9A9BB] text-[#A87A2A] text-xs font-semibold uppercase tracking-widest mb-2">
@@ -44,7 +78,6 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
 
         {/* Featured Product Layout */}
         <div className="bg-white rounded-3xl p-6 sm:p-10 border border-[#E9A9BB]/40 shadow-xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          
           {/* Visual Gallery Grid (7 cols) */}
           <div className="lg:col-span-7">
             {featuredProduct.gallery && featuredProduct.gallery.length >= 2 ? (
@@ -63,9 +96,18 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
                       }
                     }}
                   />
-                  <span className="absolute top-3 left-3 bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
-                    {featuredProduct.discountPercent || 30}% OFF Limited Festive
-                  </span>
+                  <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 items-center">
+                    {discountPercent > 0 && (
+                      <span className="bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+                        {discountPercent}% OFF
+                      </span>
+                    )}
+                    {featuredProduct.stock && featuredProduct.stock <= 10 && (
+                      <span className="bg-amber-800/90 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-xs backdrop-blur-xs">
+                        Only {featuredProduct.stock} Left
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Real Product Detail Shots */}
@@ -104,7 +146,7 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
                 </div>
               </div>
             ) : (
-              /* Clean Single Showcase without any fake demo stock pictures */
+              /* Clean Single Showcase */
               <div className="max-w-md mx-auto aspect-[3/4] rounded-2xl overflow-hidden bg-stone-100 shadow-md group relative">
                 <img
                   src={normalizeProductImageUrl(featuredProduct.image)}
@@ -118,9 +160,18 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
                     }
                   }}
                 />
-                <span className="absolute top-3 left-3 bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
-                  {featuredProduct.discountPercent || 30}% OFF Limited Festive
-                </span>
+                <div className="absolute top-3 left-3 flex flex-wrap gap-1.5 items-center">
+                  {discountPercent > 0 && (
+                    <span className="bg-[#A87A2A] text-white text-xs font-bold px-3 py-1 rounded-full shadow-xs">
+                      {discountPercent}% OFF
+                    </span>
+                  )}
+                  {featuredProduct.stock && featuredProduct.stock <= 10 && (
+                    <span className="bg-amber-800/90 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-xs backdrop-blur-xs">
+                      Only {featuredProduct.stock} Left
+                    </span>
+                  )}
+                </div>
               </div>
             )}
           </div>
@@ -139,17 +190,99 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
               <span className="text-2xl sm:text-3xl font-bold text-[#2B2320]">
                 ₹{featuredProduct.price.toLocaleString('en-IN')}
               </span>
-              <span className="text-base text-stone-400 line-through">
-                ₹{featuredProduct.originalPrice.toLocaleString('en-IN')}
-              </span>
-              <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                Save ₹1,400
-              </span>
+              {featuredProduct.originalPrice > featuredProduct.price && (
+                <span className="text-base text-stone-400 line-through">
+                  ₹{featuredProduct.originalPrice.toLocaleString('en-IN')}
+                </span>
+              )}
+              {savings > 0 && (
+                <span className="text-xs font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                  Save ₹{savings.toLocaleString('en-IN')}
+                </span>
+              )}
             </div>
 
-            <p className="text-xs sm:text-sm text-stone-600 leading-relaxed mb-5">
-              {featuredProduct.description}
-            </p>
+            {/* 2-Column Product Specs */}
+            <div className="grid grid-cols-2 gap-2.5 mb-5 p-3.5 rounded-2xl bg-[#FBF7F0] border border-[#E9A9BB]/30 text-xs">
+              <div>
+                <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
+                  Fabric
+                </span>
+                <span className="font-semibold text-[#2B2320]">
+                  {featuredProduct.fabric || 'Pure Cambric Cotton'}
+                </span>
+              </div>
+              <div>
+                <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
+                  Fit
+                </span>
+                <span className="font-semibold text-[#2B2320]">Tailored Jaipur Fit</span>
+              </div>
+              <div>
+                <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
+                  Kurta Length
+                </span>
+                <span className="font-semibold text-[#2B2320]">Calf Length (44–46 in)</span>
+              </div>
+              <div>
+                <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
+                  Bottom
+                </span>
+                <span className="font-semibold text-[#2B2320]">Matching Trousers / Pant</span>
+              </div>
+              <div>
+                <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
+                  Sleeves
+                </span>
+                <span className="font-semibold text-[#2B2320]">3/4th Sleeves</span>
+              </div>
+              <div>
+                <span className="text-stone-400 block text-[10px] uppercase font-bold tracking-wider">
+                  Craft Heritage
+                </span>
+                <span className="font-semibold text-[#2B2320]">Jaipur Handcrafted</span>
+              </div>
+            </div>
+
+            {/* Size Selector (User must pick size, no preselection) */}
+            <div className="mb-5">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-[#2B2320] uppercase tracking-wider">
+                  Select Size:{' '}
+                  {selectedSize ? (
+                    <span className="text-[#A87A2A] font-bold">{selectedSize}</span>
+                  ) : (
+                    <span className="text-stone-400 font-normal italic text-[11px]">
+                      (Please select)
+                    </span>
+                  )}
+                </span>
+                {sizeError && (
+                  <span className="text-xs font-semibold text-rose-600 flex items-center gap-1 animate-pulse">
+                    <AlertCircle className="w-3.5 h-3.5" /> Please choose a size
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                {availableSizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    onClick={() => {
+                      setSelectedSize(size);
+                      setSizeError(false);
+                    }}
+                    className={`min-w-[44px] h-10 px-3.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
+                      selectedSize === size
+                        ? 'border-[#A87A2A] bg-[#A87A2A] text-white shadow-xs'
+                        : 'border-stone-300 text-stone-700 hover:border-[#A87A2A] bg-white'
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
 
             {/* Highlights List */}
             <div className="space-y-2 mb-6">
@@ -165,24 +298,29 @@ export const FeaturedSection: React.FC<FeaturedSectionProps> = ({
             <div className="flex flex-col sm:flex-row gap-3">
               <button
                 type="button"
-                onClick={() => onAddToCart(featuredProduct, 'M')}
-                className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all active:scale-98"
+                onClick={handleAdd}
+                className="flex-1 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all active:scale-98 cursor-pointer"
               >
                 <ShoppingBag className="w-4 h-4" />
-                <span>Add M Size to Bag</span>
+                <span>
+                  {addedToast
+                    ? `Added (${selectedSize}) to Bag! ✓`
+                    : selectedSize
+                    ? `Add ${selectedSize} to Bag`
+                    : 'Add to Bag'}
+                </span>
               </button>
 
               <button
                 type="button"
                 onClick={handleWhatsApp}
-                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all active:scale-98"
+                className="flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs uppercase tracking-wider shadow-md transition-all active:scale-98 cursor-pointer"
               >
                 <MessageCircle className="w-4 h-4" />
                 <span>WhatsApp</span>
               </button>
             </div>
           </div>
-
         </div>
       </div>
     </section>

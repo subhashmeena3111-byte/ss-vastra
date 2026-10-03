@@ -1,39 +1,47 @@
 import React, { useState } from 'react';
 import { Star, ChevronLeft, ChevronRight, Quote } from 'lucide-react';
 
-export const ReviewsSlider: React.FC = () => {
+interface ReviewsSliderProps {
+  onViewProduct?: (productId: number) => void;
+}
+
+export const ReviewsSlider: React.FC<ReviewsSliderProps> = ({ onViewProduct }) => {
   const reviews = [
     {
+      productId: 12,
       name: 'Ananya Sharma',
       city: 'South Delhi',
-      product: 'Jaipuri Gotapatti Anarkali Set',
+      product: 'Olive Green Floral Embroidered Kurta Set',
       rating: 5,
       review:
-        'The pure cotton fabric is so soft and breathable, perfect for summer poojas and weddings. The flare is huge and gotapatti work looks royal! Delivered to Delhi in just 3 days.',
+        'The floral embroidery on the olive green suit is exquisite. The neckline and dupatta lace finishing are high boutique grade. Delivered to Delhi in just 3 days!',
     },
     {
+      productId: 11,
       name: 'Dr. Meenakshi Iyer',
       city: 'Indiranagar, Bengaluru',
-      product: 'Handblock Printed Co-ord Set',
+      product: 'Red & Beige Floral Pure Cotton Alia Cut Kurta Set',
       rating: 5,
       review:
-        'SS VASTRA co-ords have become my daily hospital and clinic go-to. Extremely elegant, neat stitching, and doesn’t bleed color at all in wash. Ordering two more pairs today!',
+        'The Alia cut flair on this red floral suit gives such an elegant, flattering silhouette. Pure cotton is soft on the skin and breathable for long clinic hours.',
     },
     {
+      productId: 10,
       name: 'Ritu Agarwal',
       city: 'Malabar Hill, Mumbai',
-      product: 'Mulmul Straight Kurta with Afghani Pants',
+      product: 'Peach Mirror Work Pure Cotton Kurti & Pant Set',
       rating: 5,
       review:
-        'Subhash ji on WhatsApp was so courteous and helped me choose the exact bust size. The fit is tailor-made perfection. So proud to support authentic Jaipur weavers.',
+        'Subhash ji on WhatsApp helped me choose the exact chest size. The mirror work details on the peach set are gorgeous and look even better in person.',
     },
     {
+      productId: 9,
       name: 'Pooja Choudhary',
       city: 'Vaishali Nagar, Jaipur',
-      product: 'Festive Banarasi & Chanderi Silk Suit',
+      product: 'Teal Blue Floral Print Straight Kurta Pant Set',
       rating: 5,
       review:
-        'Being a Jaipurite, I am very picky about authentic Sanganeri handblock prints. SS VASTRA’s finishing and quality beats high-end boutique stores at half the price.',
+        'Being from Jaipur, I know quality Sanganeri print and stitching. SS VASTRA’s teal set has crisp prints, neat seams, and didn’t shrink or bleed color in wash.',
     },
   ];
 
@@ -47,6 +55,10 @@ export const ReviewsSlider: React.FC = () => {
     setCurrentIndex((prev) => (prev === reviews.length - 1 ? 0 : prev + 1));
   };
 
+  const averageRating = (
+    reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length
+  ).toFixed(1);
+
   return (
     <section className="py-14 sm:py-20 bg-[#FBF7F0] border-b border-[#E9A9BB]/30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -54,17 +66,17 @@ export const ReviewsSlider: React.FC = () => {
         {/* Header */}
         <div className="text-center max-w-2xl mx-auto mb-10">
           <span className="text-xs uppercase tracking-[0.25em] text-[#A87A2A] font-bold block mb-2">
-            Loved By Over 10,000+ Women
+            Verified Boutique Reviews ({reviews.length})
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#2B2320]">
-            Customer Reviews & Stories
+            Customer Stories & Experiences
           </h2>
           <div className="flex items-center justify-center gap-1 mt-3">
             {[...Array(5)].map((_, i) => (
               <Star key={i} className="w-4 h-4 fill-amber-500 text-amber-500" />
             ))}
             <span className="text-xs font-bold text-stone-700 ml-2">
-              4.9 / 5.0 Average Rating
+              {averageRating} / 5.0 Average Rating ({reviews.length} Verified Reviews)
             </span>
           </div>
         </div>
@@ -85,7 +97,7 @@ export const ReviewsSlider: React.FC = () => {
               "{reviews[currentIndex].review}"
             </p>
 
-            <div className="flex items-center justify-between border-t border-stone-100 pt-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-t border-stone-100 pt-4 gap-4">
               <div>
                 <h4 className="font-serif text-base font-bold text-[#2B2320]">
                   {reviews[currentIndex].name}
@@ -93,17 +105,28 @@ export const ReviewsSlider: React.FC = () => {
                 <p className="text-xs text-stone-500">
                   {reviews[currentIndex].city} • Verified Buyer
                 </p>
-                <span className="inline-block text-[11px] font-semibold text-[#A87A2A] bg-[#F7E3E8] px-2 py-0.5 rounded-md mt-1">
-                  Bought: {reviews[currentIndex].product}
-                </span>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <span className="inline-block text-[11px] font-semibold text-[#A87A2A] bg-[#F7E3E8] px-2.5 py-0.5 rounded-md">
+                    Bought: {reviews[currentIndex].product}
+                  </span>
+                  {onViewProduct && (
+                    <button
+                      type="button"
+                      onClick={() => onViewProduct(reviews[currentIndex].productId)}
+                      className="text-[11px] font-bold text-amber-900 bg-amber-100 hover:bg-amber-200 px-2.5 py-0.5 rounded-md transition-colors cursor-pointer"
+                    >
+                      View Outfit →
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Slider Controls */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 self-end sm:self-center">
                 <button
                   type="button"
                   onClick={prevReview}
-                  className="p-2.5 rounded-full border border-stone-200 text-stone-600 hover:bg-[#A87A2A] hover:text-white transition-colors"
+                  className="p-2.5 rounded-full border border-stone-200 text-stone-600 hover:bg-[#A87A2A] hover:text-white transition-colors cursor-pointer"
                   aria-label="Previous review"
                 >
                   <ChevronLeft className="w-4 h-4" />
@@ -111,7 +134,7 @@ export const ReviewsSlider: React.FC = () => {
                 <button
                   type="button"
                   onClick={nextReview}
-                  className="p-2.5 rounded-full border border-stone-200 text-stone-600 hover:bg-[#A87A2A] hover:text-white transition-colors"
+                  className="p-2.5 rounded-full border border-stone-200 text-stone-600 hover:bg-[#A87A2A] hover:text-white transition-colors cursor-pointer"
                   aria-label="Next review"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -126,7 +149,7 @@ export const ReviewsSlider: React.FC = () => {
               <button
                 key={idx}
                 onClick={() => setCurrentIndex(idx)}
-                className={`h-2 rounded-full transition-all ${
+                className={`h-2 rounded-full transition-all cursor-pointer ${
                   currentIndex === idx ? 'w-6 bg-[#A87A2A]' : 'w-2 bg-[#E9A9BB]'
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}

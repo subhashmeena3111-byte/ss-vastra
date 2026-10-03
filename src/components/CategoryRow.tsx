@@ -1,24 +1,25 @@
-import React from 'react';
-import { Category } from '../types.ts';
+import { Product, Category } from '../types.ts';
 import { normalizeProductImageUrl, getDriveThumbnailUrl } from '../utils/imageUtils.ts';
 
 interface CategoryRowProps {
   categories: Category[];
   selectedCategory: string;
   onSelectCategory: (name: string) => void;
+  products?: Product[];
 }
 
 export const CategoryRow: React.FC<CategoryRowProps> = ({
   categories,
   selectedCategory,
   onSelectCategory,
+  products = [],
 }) => {
   const allOption: Category = {
     id: 0,
     slug: 'all',
     name: 'All Products',
     icon: '✨',
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=400&q=80',
   };
 
   const list = [allOption, ...categories];
@@ -48,6 +49,14 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
               (cat.name === 'All Products' && (!selectedCategory || selectedCategory === 'All Products'));
 
             const normalizedImg = normalizeProductImageUrl(cat.image);
+            const productCount = products.length > 0 && cat.name !== 'All Products'
+              ? products.filter(
+                  (p) =>
+                    p.category?.toLowerCase() === cat.name.toLowerCase() ||
+                    p.category?.toLowerCase() === cat.slug.toLowerCase()
+                ).length
+              : 1;
+            const isComingSoon = cat.name !== 'All Products' && products.length > 0 && productCount === 0;
 
             return (
               <button
@@ -84,6 +93,11 @@ export const CategoryRow: React.FC<CategoryRowProps> = ({
                       <div className="absolute inset-0 bg-[#A87A2A]/20 backdrop-blur-xs flex items-center justify-center">
                         <span className="w-2.5 h-2.5 rounded-full bg-white shadow-xs" />
                       </div>
+                    )}
+                    {isComingSoon && (
+                      <span className="absolute bottom-1 px-1.5 py-0.2 rounded-full bg-[#2B2320]/90 text-amber-200 text-[8px] font-extrabold uppercase tracking-wider shadow-2xs">
+                        Soon
+                      </span>
                     )}
                   </div>
                 </div>

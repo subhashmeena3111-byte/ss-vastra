@@ -1800,7 +1800,7 @@ app.get(
           totalOrdersCount: allOrders.length,
           pendingShipments,
           lowStockCount: lowStockProducts.length,
-          totalProductsCount: allProducts.length,
+          totalProductsCount: allProducts.filter((p: any) => p.isActive !== false).length,
         },
         recentOrders: allOrders.slice(0, 8),
         lowStockProducts: lowStockProducts.slice(0, 5),

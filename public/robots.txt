@@ -1,0 +1,17 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+Allow: /privacy-policy
+Allow: /terms
+Allow: /refund-exchange-policy
+Allow: /shipping-policy
+Allow: /about
+Allow: /contact
+
+# Disallow admin backoffice and internal API endpoints
+Disallow: /admin
+Disallow: /api/admin/
+Disallow: /api/auth/
+Disallow: /api/track/
+
+Sitemap: https://ssvastra.com/sitemap.xml

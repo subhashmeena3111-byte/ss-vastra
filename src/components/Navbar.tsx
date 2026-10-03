@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ShoppingBag,
   Search,
@@ -16,6 +16,7 @@ import {
   Share2,
   Link as LinkIcon,
   Heart,
+  ChevronDown,
 } from 'lucide-react';
 import { usePWAInstall } from '../hooks/usePWAInstall.ts';
 
@@ -58,15 +59,32 @@ export const Navbar: React.FC<NavbarProps> = ({
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSModal, setShowIOSModal] = useState(false);
 
+  const [accountDropdownOpen, setAccountDropdownOpen] = useState(false);
+  const accountDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (accountDropdownRef.current && !accountDropdownRef.current.contains(e.target as Node)) {
+        setAccountDropdownOpen(false);
+      }
+    };
+    if (accountDropdownOpen) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+    };
+  }, [accountDropdownOpen]);
+
   const navLinks = [
     { label: 'Home', action: () => onSelectCategory('All Products') },
     { label: 'Kurta Sets', action: () => onSelectCategory('Kurta Sets') },
-    { label: 'Co-ord Sets', action: () => onSelectCategory('Co-ord Sets') },
-    { label: 'Anarkali & Dresses', action: () => onSelectCategory('Anarkali & Dresses') },
+    { label: 'Co-ords', action: () => onSelectCategory('Co-ord Sets') },
+    { label: 'Anarkali', action: () => onSelectCategory('Anarkali & Dresses') },
     { label: 'Kurtis', action: () => onSelectCategory('Kurta / Kurtis') },
-    { label: 'Festive Fits', action: () => onSelectCategory('Festive Fits') },
+    { label: 'Festive', action: () => onSelectCategory('Festive Fits') },
     { label: 'Fabrics', action: () => onSelectCategory('Fabrics') },
-    { label: 'Contact', action: () => onOpenContact ? onOpenContact() : null },
+    { label: 'Contact', action: () => (onOpenContact ? onOpenContact() : null) },
   ];
 
   return (
@@ -132,13 +150,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             </div>
 
-            {/* Desktop Navigation Links (14px, weight 500, 22px spacing) */}
-            <nav className="hidden lg:flex items-center space-x-[22px]">
+            {/* Desktop Navigation Links (14px, weight 500, whitespace-nowrap) */}
+            <nav className="hidden lg:flex items-center space-x-3.5 xl:space-x-5">
               {navLinks.map((link) => (
                 <button
                   key={link.label}
                   onClick={link.action}
-                  className="text-[14px] font-[500] text-[#2B2320] hover:text-[#A87A2A] transition-colors relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[2px] after:bg-[#A87A2A] hover:after:w-full after:transition-all after:duration-200"
+                  className="text-[14px] font-[500] text-[#2B2320] hover:text-[#A87A2A] whitespace-nowrap transition-colors relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[2px] after:bg-[#A87A2A] hover:after:w-full after:transition-all after:duration-200"
                 >
                   {link.label}
                 </button>
@@ -147,94 +165,13 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             {/* Header Right Action Icons */}
             <div className="flex items-center space-x-2 sm:space-x-3">
-              {/* PWA Install Button */}
-              {!isInstalled && isInstallable && (
-                <button
-                  onClick={install}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-[#F7E3E8] text-[#A87A2A] border border-[#E9A9BB] rounded-full hover:bg-[#A87A2A] hover:text-white transition-all shadow-xs"
-                  title="Install SS VASTRA App on your device"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Install App</span>
-                </button>
-              )}
-
-              {!isInstalled && isIOS && (
-                <button
-                  onClick={() => setShowIOSModal(true)}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium bg-[#F7E3E8] text-[#A87A2A] border border-[#E9A9BB] rounded-full hover:bg-[#A87A2A] hover:text-white transition-all"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Add to Home</span>
-                </button>
-              )}
-
-              {/* Track Order Button */}
-              <button
-                onClick={onOpenTrackOrder}
-                className="hidden md:flex items-center gap-1.5 text-[13px] font-medium text-[#2B2320] hover:text-[#A87A2A] px-2.5 py-1.5 rounded-lg hover:bg-black/5 transition-colors"
-                title="Track your order delivery"
-              >
-                <Truck className="w-4 h-4 text-[#A87A2A]" />
-                <span>Track Order</span>
-              </button>
-
-              {/* My Orders Button */}
-              {onOpenMyOrders && (
-                <button
-                  type="button"
-                  onClick={onOpenMyOrders}
-                  className="hidden sm:flex items-center gap-1.5 text-[13px] font-medium text-[#2B2320] hover:text-[#A87A2A] px-2.5 py-1.5 rounded-lg hover:bg-black/5 transition-colors"
-                  title="View your orders & tracking status"
-                >
-                  <Package className="w-4 h-4 text-[#A87A2A]" />
-                  <span>My Orders</span>
-                </button>
-              )}
-
-              {/* Customer Account Trigger */}
-              {onOpenCustomerAuth && (
-                <button
-                  type="button"
-                  onClick={onOpenCustomerAuth}
-                  className="flex items-center gap-1.5 px-2.5 py-1 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors"
-                  title={customerName ? `Namaste ${customerName}` : 'Customer Sign In / Profile'}
-                  aria-label="Customer Profile"
-                >
-                  <div className="w-8 h-8 rounded-full bg-[#F7E3E8] border border-[#A87A2A]/40 flex items-center justify-center text-[#A87A2A] shrink-0">
-                    <User className="w-4 h-4" />
-                  </div>
-                  {customerName ? (
-                    <span className="hidden md:inline text-xs font-bold text-[#2B2320] max-w-[90px] truncate">
-                      {customerName.split(' ')[0]}
-                    </span>
-                  ) : (
-                    <span className="hidden xl:inline text-xs font-medium text-stone-600">
-                      Sign In
-                    </span>
-                  )}
-                </button>
-              )}
-
-              {/* Deep Link & Share Trigger */}
-              {onOpenDeepLink && (
-                <button
-                  type="button"
-                  onClick={onOpenDeepLink}
-                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-semibold bg-[#FBF7F0] border border-[#E9A9BB]/60 text-[#A87A2A] rounded-full hover:bg-[#A87A2A] hover:text-white transition-all shadow-2xs"
-                  title="Generate & Share Deep Links"
-                >
-                  <Share2 className="w-3.5 h-3.5" />
-                  <span className="hidden xl:inline">Deep Link</span>
-                </button>
-              )}
-
               {/* Search Icon */}
               <button
                 type="button"
                 onClick={onOpenSearch}
-                className="p-2 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors"
+                className="p-2 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors cursor-pointer"
                 aria-label="Search clothing catalog"
+                title="Search Jaipur Outfits"
               >
                 <Search className="w-5 h-5" />
               </button>
@@ -244,7 +181,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   type="button"
                   onClick={onOpenWishlist}
-                  className="p-2 text-[#2B2320] hover:text-rose-500 hover:bg-black/5 rounded-full transition-colors relative"
+                  className="p-2 text-[#2B2320] hover:text-rose-500 hover:bg-black/5 rounded-full transition-colors relative cursor-pointer"
                   aria-label="Saved outfits (wishlist)"
                   title="View Saved Wishlist Outfits"
                 >
@@ -261,8 +198,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={onOpenCart}
-                className="p-2 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors relative"
+                className="p-2 text-[#2B2320] hover:text-[#A87A2A] hover:bg-black/5 rounded-full transition-colors relative cursor-pointer"
                 aria-label="Shopping bag"
+                title="Shopping Bag"
               >
                 <ShoppingBag className="w-5 h-5" />
                 {cartCount > 0 && (
@@ -272,20 +210,125 @@ export const Navbar: React.FC<NavbarProps> = ({
                 )}
               </button>
 
-              {/* Admin Portal Gateway */}
-              <button
-                type="button"
-                onClick={onOpenAdmin}
-                className={`p-2 rounded-full transition-colors ${
-                  isAdminLoggedIn
-                    ? 'text-amber-700 bg-amber-100 hover:bg-amber-200'
-                    : 'text-stone-500 hover:text-[#A87A2A] hover:bg-black/5'
-                }`}
-                title={isAdminLoggedIn ? 'Admin Panel (Logged In)' : 'Admin Login'}
-                aria-label="Admin Portal"
-              >
-                <ShieldCheck className="w-5 h-5" />
-              </button>
+              {/* Desktop Unified Account Dropdown */}
+              <div className="relative hidden md:block" ref={accountDropdownRef}>
+                <button
+                  type="button"
+                  onClick={() => setAccountDropdownOpen(!accountDropdownOpen)}
+                  className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full hover:bg-black/5 text-[#2B2320] transition-colors focus:outline-none cursor-pointer"
+                  title="Account & Quick Access"
+                  aria-label="Account"
+                >
+                  <div className="w-8 h-8 rounded-full bg-[#F7E3E8] border border-[#A87A2A]/40 flex items-center justify-center text-[#A87A2A] shrink-0">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <span className="hidden xl:inline text-xs font-semibold text-[#2B2320] max-w-[80px] truncate">
+                    {customerName ? customerName.split(' ')[0] : 'Account'}
+                  </span>
+                  <ChevronDown className={`w-3.5 h-3.5 text-stone-500 transition-transform ${accountDropdownOpen ? 'rotate-180' : ''}`} />
+                </button>
+
+                {accountDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-56 rounded-2xl bg-white shadow-2xl border border-[#E9A9BB]/40 py-2 z-50 animate-in fade-in duration-150">
+                    <div className="px-4 py-2 border-b border-stone-100">
+                      <p className="text-xs font-bold text-[#2B2320] truncate">
+                        {customerName ? `Namaste, ${customerName}` : 'Welcome to SS VASTRA'}
+                      </p>
+                      {onOpenCustomerAuth && (
+                        <button
+                          onClick={() => {
+                            setAccountDropdownOpen(false);
+                            onOpenCustomerAuth();
+                          }}
+                          className="text-[11px] text-[#A87A2A] font-semibold hover:underline mt-0.5 block text-left"
+                        >
+                          {customerName ? 'Manage Profile' : 'Sign In / Register'}
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="py-1">
+                      {onOpenMyOrders && (
+                        <button
+                          onClick={() => {
+                            setAccountDropdownOpen(false);
+                            onOpenMyOrders();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-[#FBF7F0] hover:text-[#A87A2A] transition-colors text-left"
+                        >
+                          <Package className="w-4 h-4 text-[#A87A2A]" />
+                          <span>My Orders & History</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setAccountDropdownOpen(false);
+                          onOpenTrackOrder();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-[#FBF7F0] hover:text-[#A87A2A] transition-colors text-left"
+                      >
+                        <Truck className="w-4 h-4 text-[#A87A2A]" />
+                        <span>Track Order Delivery</span>
+                      </button>
+
+                      {!isInstalled && isInstallable && (
+                        <button
+                          onClick={() => {
+                            setAccountDropdownOpen(false);
+                            install();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-[#FBF7F0] hover:text-[#A87A2A] transition-colors text-left"
+                        >
+                          <Download className="w-4 h-4 text-[#A87A2A]" />
+                          <span>Install Web App</span>
+                        </button>
+                      )}
+
+                      {!isInstalled && isIOS && (
+                        <button
+                          onClick={() => {
+                            setAccountDropdownOpen(false);
+                            setShowIOSModal(true);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2 text-xs text-stone-700 hover:bg-[#FBF7F0] hover:text-[#A87A2A] transition-colors text-left"
+                        >
+                          <Download className="w-4 h-4 text-[#A87A2A]" />
+                          <span>Add to Home Screen</span>
+                        </button>
+                      )}
+
+                      {/* Admin Portal Gateway (Admin Only) */}
+                      {isAdminLoggedIn && (
+                        <div className="border-t border-stone-100 mt-1 pt-1">
+                          <button
+                            onClick={() => {
+                              setAccountDropdownOpen(false);
+                              onOpenAdmin();
+                            }}
+                            className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-amber-800 bg-amber-50 hover:bg-amber-100 transition-colors text-left"
+                          >
+                            <ShieldCheck className="w-4 h-4 text-[#A87A2A]" />
+                            <span>Admin Portal Dashboard</span>
+                          </button>
+                          {onOpenDeepLink && (
+                            <button
+                              onClick={() => {
+                                setAccountDropdownOpen(false);
+                                onOpenDeepLink();
+                              }}
+                              className="w-full flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-stone-700 hover:bg-[#FBF7F0] hover:text-[#A87A2A] transition-colors text-left"
+                            >
+                              <Share2 className="w-4 h-4 text-[#A87A2A]" />
+                              <span>Deep Link Generator</span>
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -366,7 +409,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>Track Order Status</span>
               </button>
 
-              {onOpenDeepLink && (
+              {isAdminLoggedIn && onOpenDeepLink && (
                 <button
                   onClick={() => {
                     onOpenDeepLink();
@@ -403,21 +446,19 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <span>WhatsApp Helpline: 9783770735</span>
               </a>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenAdmin();
-                }}
-                className={`w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[14px] font-medium rounded-lg border transition-all ${
-                  isAdminLoggedIn
-                    ? 'bg-amber-100 text-amber-900 border-amber-300 font-semibold'
-                    : 'bg-stone-100 text-stone-800 hover:bg-stone-200 border-stone-300'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 text-[#A87A2A]" />
-                <span>{isAdminLoggedIn ? '👑 Open Admin Portal' : '🔒 Admin Login / Portal'}</span>
-              </button>
+              {isAdminLoggedIn && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    onOpenAdmin();
+                  }}
+                  className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-[14px] font-medium rounded-lg border transition-all bg-amber-100 text-amber-900 border-amber-300 font-semibold"
+                >
+                  <ShieldCheck className="w-4 h-4 text-[#A87A2A]" />
+                  <span>👑 Open Admin Portal</span>
+                </button>
+              )}
             </div>
           </div>
         )}

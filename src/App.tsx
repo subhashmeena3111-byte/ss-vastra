@@ -22,6 +22,7 @@ import { DeepLinkModal } from './components/DeepLinkModal.tsx';
 import { WishlistDrawer } from './components/WishlistDrawer.tsx';
 import { QuickEditProductModal } from './components/QuickEditProductModal.tsx';
 import { ConfirmDeleteModal } from './components/ConfirmDeleteModal.tsx';
+import { ComplianceModal, ComplianceTab } from './components/ComplianceModal.tsx';
 import { Product, Category, CartItem, Banner } from './types.ts';
 import { sanitizeProductList } from './utils/productUtils.ts';
 import { getDefaultProducts } from './data/defaultProducts.ts';
@@ -35,42 +36,42 @@ const INITIAL_CATEGORIES: Category[] = [
     slug: 'kurta-sets',
     name: 'Kurta Sets',
     icon: '👗',
-    image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1610030469983-98e550d6193c?auto=format&fit=crop&w=400&q=80',
   },
   {
     id: 2,
     slug: 'co-ord-sets',
     name: 'Co-ord Sets',
     icon: '👚',
-    image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1609357605129-26f69add5d6e?auto=format&fit=crop&w=400&q=80',
   },
   {
     id: 3,
     slug: 'anarkali-dresses',
     name: 'Anarkali & Dresses',
     icon: '💃',
-    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?auto=format&fit=crop&w=400&q=80',
   },
   {
     id: 4,
     slug: 'kurta-kurtis',
     name: 'Kurta / Kurtis',
     icon: '🌸',
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=400&q=80',
   },
   {
     id: 5,
     slug: 'festive-fits',
     name: 'Festive Fits',
     icon: '👑',
-    image: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1566737236500-c8ac43014a67?auto=format&fit=crop&w=400&q=80',
   },
   {
     id: 6,
     slug: 'fabrics',
     name: 'Fabrics',
     icon: '🧵',
-    image: 'https://images.unsplash.com/photo-1607083206869-4c7672e72a8a?auto=format&fit=crop&w=300&q=80',
+    image: 'https://images.unsplash.com/photo-1601924994987-69e26d50dc26?auto=format&fit=crop&w=400&q=80',
   },
 ];
 
@@ -107,6 +108,35 @@ export function App() {
   });
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [detailProduct, setDetailProduct] = useState<Product | null>(null);
+
+  // Store Configuration Settings
+  const [storeSettings, setStoreSettings] = useState<Record<string, string>>({});
+
+  // Compliance Policy Modal State
+  const [complianceModalOpen, setComplianceModalOpen] = useState(false);
+  const [complianceTab, setComplianceTab] = useState<ComplianceTab>('privacy-policy');
+
+  const handleOpenCompliance = (tab: ComplianceTab) => {
+    setComplianceTab(tab);
+    setComplianceModalOpen(true);
+    window.history.pushState(null, '', `/${tab}`);
+  };
+
+  const handleCloseCompliance = () => {
+    setComplianceModalOpen(false);
+    if (
+      [
+        '/privacy-policy',
+        '/terms',
+        '/refund-exchange-policy',
+        '/shipping-policy',
+        '/about',
+        '/contact',
+      ].includes(window.location.pathname)
+    ) {
+      window.history.pushState(null, '', '/');
+    }
+  };
 
   // Customer Profile State
   const [customerProfile, setCustomerProfile] = useState<{
@@ -155,6 +185,124 @@ export function App() {
       }).catch(() => {});
     } catch {}
   }, []);
+
+  // Fetch store settings (phone, business email, policies)
+  useEffect(() => {
+    fetch('/api/settings')
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success && d.settings) {
+          setStoreSettings(d.settings);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  // Listen to browser URL changes for compliance pages
+  useEffect(() => {
+    const handleRouteChange = () => {
+      const path = window.location.pathname;
+      if (path === '/privacy-policy') {
+        setComplianceTab('privacy-policy');
+        setComplianceModalOpen(true);
+      } else if (path === '/terms') {
+        setComplianceTab('terms');
+        setComplianceModalOpen(true);
+      } else if (path === '/refund-exchange-policy') {
+        setComplianceTab('refund-exchange-policy');
+        setComplianceModalOpen(true);
+      } else if (path === '/shipping-policy') {
+        setComplianceTab('shipping-policy');
+        setComplianceModalOpen(true);
+      } else if (path === '/about') {
+        setComplianceTab('about');
+        setComplianceModalOpen(true);
+      } else if (path === '/contact') {
+        setComplianceTab('contact');
+        setComplianceModalOpen(true);
+      }
+    };
+    handleRouteChange();
+    window.addEventListener('popstate', handleRouteChange);
+    return () => window.removeEventListener('popstate', handleRouteChange);
+  }, []);
+
+  // Dynamic SEO meta tags and Schema.org Product JSON-LD
+  useEffect(() => {
+    const canonicalBase =
+      (import.meta as any).env?.VITE_APP_URL ||
+      (import.meta as any).env?.NEXT_PUBLIC_APP_URL ||
+      window.location.origin;
+
+    let scriptTag = document.getElementById('product-jsonld') as HTMLScriptElement | null;
+
+    if (detailProduct) {
+      document.title = `${detailProduct.name} | SS VASTRA Jaipur`;
+
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute(
+          'content',
+          detailProduct.description
+            ? `${detailProduct.name} - ${detailProduct.description.slice(0, 150)}... Handcrafted in Jaipur by SS VASTRA.`
+            : `Shop ${detailProduct.name} online at SS VASTRA Jaipur.`
+        );
+      }
+
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute('content', `${detailProduct.name} | SS VASTRA`);
+
+      const ogImage = document.querySelector('meta[property="og:image"]');
+      if (ogImage) ogImage.setAttribute('content', detailProduct.image);
+
+      if (!scriptTag) {
+        scriptTag = document.createElement('script');
+        scriptTag.id = 'product-jsonld';
+        scriptTag.type = 'application/ld+json';
+        document.head.appendChild(scriptTag);
+      }
+
+      scriptTag.text = JSON.stringify({
+        '@context': 'https://schema.org',
+        '@type': 'Product',
+        name: detailProduct.name,
+        image: [detailProduct.image, ...(detailProduct.gallery || [])],
+        description: detailProduct.description || `${detailProduct.name} - Handcrafted Jaipuri ethnic wear`,
+        sku: `SSV-${detailProduct.id}`,
+        brand: {
+          '@type': 'Brand',
+          name: 'SS VASTRA',
+        },
+        offers: {
+          '@type': 'Offer',
+          url: `${canonicalBase}/?product=${detailProduct.id}`,
+          priceCurrency: 'INR',
+          price: detailProduct.price,
+          priceValidUntil: '2026-12-31',
+          availability:
+            (detailProduct.stock || 1) > 0
+              ? 'https://schema.org/InStock'
+              : 'https://schema.org/OutOfStock',
+          seller: {
+            '@type': 'Organization',
+            name: 'SS VASTRA',
+          },
+        },
+      });
+    } else {
+      document.title = 'SS VASTRA | Ladies Fashion & Fabrics, Jaipur';
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) {
+        metaDesc.setAttribute(
+          'content',
+          'SS VASTRA offers premium handcrafted ladies fashion, kurta sets, co-ord sets, anarkalis, festive fits, and Jaipuri fabrics with elegance in every thread.'
+        );
+      }
+      if (scriptTag) {
+        scriptTag.remove();
+      }
+    }
+  }, [detailProduct]);
 
   // Cart State (Persisted in localStorage)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
@@ -417,6 +565,38 @@ export function App() {
         return;
       }
 
+      // 1b. Compliance & Legal Policies: /privacy-policy, /terms, /refund-exchange-policy, etc.
+      if (path === '/privacy-policy') {
+        setComplianceTab('privacy-policy');
+        setComplianceModalOpen(true);
+        return;
+      }
+      if (path === '/terms') {
+        setComplianceTab('terms');
+        setComplianceModalOpen(true);
+        return;
+      }
+      if (path === '/refund-exchange-policy') {
+        setComplianceTab('refund-exchange-policy');
+        setComplianceModalOpen(true);
+        return;
+      }
+      if (path === '/shipping-policy') {
+        setComplianceTab('shipping-policy');
+        setComplianceModalOpen(true);
+        return;
+      }
+      if (path === '/about') {
+        setComplianceTab('about');
+        setComplianceModalOpen(true);
+        return;
+      }
+      if (path === '/contact') {
+        setComplianceTab('contact');
+        setComplianceModalOpen(true);
+        return;
+      }
+
       // 2. Deep Link Generator Modal: ?deeplink=open or ?share=open
       if (params.get('deeplink') === 'open' || params.get('share') === 'open') {
         setDeepLinkModalOpen(true);
@@ -544,8 +724,30 @@ export function App() {
       }
     } catch {}
 
-    const token = localStorage.getItem('ss_vastra_admin_token');
-    setIsAdminLoggedIn(!!token);
+    const verifyServerAdmin = async () => {
+      const token = localStorage.getItem('ss_vastra_admin_token');
+      if (!token) {
+        setIsAdminLoggedIn(false);
+        return;
+      }
+      try {
+        const res = await fetch('/api/admin/me', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.admin && ['super_admin', 'admin', 'staff'].includes(data.admin.role)) {
+            setIsAdminLoggedIn(true);
+            return;
+          }
+        }
+        setIsAdminLoggedIn(false);
+      } catch {
+        setIsAdminLoggedIn(false);
+      }
+    };
+
+    verifyServerAdmin();
     handleParseDeepLink(products, categories);
     loadProductsFromAPI();
     loadCategoriesFromAPI();
@@ -847,77 +1049,79 @@ export function App() {
       <section id="catalog-section" className="py-10 sm:py-16">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           
-          {/* Data Mode & Live Catalog Manager Strip */}
-          <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-white border border-[#E9A9BB]/40 shadow-xs flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
-              </span>
-              <div>
-                <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
-                  <span>Data Status:</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold uppercase">
-                    Live Production Mode
-                  </span>
+          {/* Data Mode & Live Catalog Manager Strip (Admin Only) */}
+          {isAdminLoggedIn && (
+            <div className="mb-6 p-3 sm:p-4 rounded-2xl bg-white border border-[#E9A9BB]/40 shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-3 w-3 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500" />
                 </span>
-                <p className="text-[11px] text-stone-500">
-                  {products.length} Outfits active | Demo Data: {products.filter((p) => Boolean(p.isDemo)).length}
-                </p>
+                <div>
+                  <span className="text-xs font-bold text-stone-900 flex items-center gap-1.5">
+                    <span>Data Status:</span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-extrabold uppercase">
+                      Live Production Mode
+                    </span>
+                  </span>
+                  <p className="text-[11px] text-stone-500">
+                    {products.length} Outfits active | Demo Data: {products.filter((p) => Boolean(p.isDemo)).length}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleClearAllDemoData}
+                  className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  title="All demo data clear karein"
+                >
+                  <span>Clear Demo Data</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickEditProduct({
+                      id: Date.now(),
+                      slug: `new-outfit-${Date.now()}`,
+                      name: '',
+                      category: categories[0]?.name || 'Kurta Sets',
+                      price: 1499,
+                      originalPrice: 1999,
+                      discountPercent: 25,
+                      sizes: ['S', 'M', 'L', 'XL'],
+                      stock: 20,
+                      image: '',
+                      description: '',
+                      fabric: 'Pure Cotton',
+                      color: '',
+                      highlights: ['Jaipur Handcrafted', 'Premium Quality'],
+                      isNewArrival: true,
+                      isBestSeller: false,
+                      isFeatured: false,
+                      isActive: true,
+                      isDemo: false,
+                    });
+                  }}
+                  className="px-3.5 py-1.5 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
+                  title="Direct naya outfit add karein"
+                >
+                  <span>+ Add Outfit</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleOpenAdmin}
+                  className="px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-amber-300 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
+                  title="Admin Data Manager kholein"
+                >
+                  <span>Data Manager</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={handleClearAllDemoData}
-                className="px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                title="All demo data clear karein"
-              >
-                <span>Clear Demo Data</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setQuickEditProduct({
-                    id: Date.now(),
-                    slug: `new-outfit-${Date.now()}`,
-                    name: '',
-                    category: categories[0]?.name || 'Kurta Sets',
-                    price: 1499,
-                    originalPrice: 1999,
-                    discountPercent: 25,
-                    sizes: ['S', 'M', 'L', 'XL'],
-                    stock: 20,
-                    image: '',
-                    description: '',
-                    fabric: 'Pure Cotton',
-                    color: '',
-                    highlights: ['Jaipur Handcrafted', 'Premium Quality'],
-                    isNewArrival: true,
-                    isBestSeller: false,
-                    isFeatured: false,
-                    isActive: true,
-                    isDemo: false,
-                  });
-                }}
-                className="px-3.5 py-1.5 rounded-xl bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-bold transition-all shadow-xs flex items-center gap-1 cursor-pointer"
-                title="Direct naya outfit add karein"
-              >
-                <span>+ Add Outfit</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleOpenAdmin}
-                className="px-3 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-800 text-amber-300 text-xs font-bold transition-all flex items-center gap-1 cursor-pointer"
-                title="Admin Data Manager kholein"
-              >
-                <span>Data Manager</span>
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* Section Heading & Filter Tabs */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -972,29 +1176,34 @@ export function App() {
 
           {/* 2-Column Grid on Mobile, 3-4 Columns on Desktop */}
           {displayedProducts.length === 0 ? (
-            <div className="text-center py-16 bg-white rounded-3xl border border-[#E9A9BB]/30 p-8 max-w-lg mx-auto">
+            <div className="text-center py-16 bg-white rounded-3xl border border-[#E9A9BB]/30 p-8 max-w-lg mx-auto shadow-xs">
+              <span className="text-3xl mb-3 block">✨</span>
               <p className="font-serif text-xl font-bold text-[#2B2320] mb-2">
-                No outfits found in this view
+                New Jaipur Collection Dropping Soon!
               </p>
-              <p className="text-xs text-stone-500 mb-6 leading-relaxed">
-                Agar aapne Demo Data hata diya hai ya Live Mode on kiya hai, to Admin Portal se apne naye kapde add karein ya Demo Data Manager se sample catalog restore karein.
+              <p className="text-xs text-stone-600 mb-6 leading-relaxed">
+                We are currently handcrafting fresh festive ethnic outfits for this collection. In the meantime, explore all active boutique outfits or chat with our Jaipur stylists on WhatsApp for custom sizing.
               </p>
-              <div className="flex flex-wrap items-center justify-center gap-2">
+              <div className="flex flex-wrap items-center justify-center gap-2.5">
                 <button
+                  type="button"
                   onClick={() => {
                     setSelectedCategory('All Products');
                     setActiveTab('all');
                   }}
-                  className="px-5 py-2.5 rounded-full bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold transition-colors"
+                  className="px-5 py-2.5 rounded-full bg-[#A87A2A] hover:bg-[#8e6520] text-white text-xs font-semibold transition-colors cursor-pointer"
                 >
-                  Show All Categories
+                  Explore All Outfits
                 </button>
-                <button
-                  onClick={handleOpenAdmin}
-                  className="px-5 py-2.5 rounded-full bg-[#A87A2A] text-white text-xs font-bold hover:bg-[#8e6520] transition-colors shadow-xs"
+                <a
+                  href="https://wa.me/919783770735"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-5 py-2.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors cursor-pointer inline-flex items-center gap-1.5"
                 >
-                  Open Admin Portal
-                </button>
+                  <MessageCircle className="w-3.5 h-3.5" />
+                  <span>Chat on WhatsApp</span>
+                </a>
               </div>
             </div>
           ) : (
@@ -1035,7 +1244,16 @@ export function App() {
       />
 
       {/* 8. Customer Reviews Slider */}
-      <ReviewsSlider />
+      <ReviewsSlider
+        onViewProduct={(productId) => {
+          const found = products.find((p) => p.id === productId);
+          if (found) {
+            handleOpenProductDetail(found);
+          } else {
+            document.getElementById('catalog-section')?.scrollIntoView({ behavior: 'smooth' });
+          }
+        }}
+      />
 
       {/* 8. Footer (3 Columns, Dark #1F1A18, Store Contacts) */}
       <Footer
@@ -1046,15 +1264,22 @@ export function App() {
         }}
         onOpenTrackOrder={() => setTrackOrderModalOpen(true)}
         onOpenMyOrders={() => setMyOrdersModalOpen(true)}
-        onOpenContact={() => setContactModalOpen(true)}
+        onOpenContact={() => {
+          setComplianceTab('contact');
+          setComplianceModalOpen(true);
+        }}
         onOpenAdmin={() => setAdminPortalOpen(true)}
+        onOpenCompliance={(tab) => handleOpenCompliance(tab)}
+        isAdminLoggedIn={isAdminLoggedIn}
+        businessEmail={storeSettings?.email || 'contact@ssvastra.com'}
+        storePhone={storeSettings?.phone || '+91 97837 70735'}
       />
 
       {/* 9. Floating WhatsApp Helpline Button */}
       <FloatingWhatsApp />
 
-      {/* Quick Admin Launcher Floating Button */}
-      {!adminPortalOpen && (
+      {/* Quick Admin Launcher Floating Button (Admin Only) */}
+      {isAdminLoggedIn && !adminPortalOpen && (
         <button
           type="button"
           onClick={handleOpenAdmin}
@@ -1168,6 +1393,19 @@ export function App() {
         onScrollToMap={() => {
           document.getElementById('store-location')?.scrollIntoView({ behavior: 'smooth' });
         }}
+        businessEmail={storeSettings?.email || 'contact@ssvastra.com'}
+      />
+
+      <ComplianceModal
+        isOpen={complianceModalOpen}
+        tab={complianceTab}
+        onClose={handleCloseCompliance}
+        onSelectTab={(tab) => {
+          setComplianceTab(tab);
+          window.history.pushState(null, '', `/${tab}`);
+        }}
+        businessEmail={storeSettings?.email || 'contact@ssvastra.com'}
+        storePhone={storeSettings?.phone || '+91 97837 70735'}
       />
 
       <SearchModal
@@ -1181,6 +1419,7 @@ export function App() {
         isOpen={adminPortalOpen}
         onClose={handleCloseAdmin}
         onProductsUpdated={loadProductsFromAPI}
+        initialProducts={products}
       />
 
       <DeepLinkModal

@@ -5,13 +5,13 @@ export const WhyChooseUs: React.FC = () => {
   const features = [
     {
       icon: Sparkles,
-      title: 'Authentic Sanganer Craft',
-      desc: 'Handblock printed and tailored directly in Sanganer, Jaipur using time-honored artisanal wooden blocks and natural colors.',
+      title: 'Artisanal Jaipur Craftsmanship',
+      desc: 'Meticulously tailored in Jaipur celebrating time-honored ethnic silhouettes, intricate embroidery, and authentic boutique finishing.',
     },
     {
       icon: Award,
-      title: '100% Breathable Fabrics',
-      desc: 'Pure 60s cambric cotton, mulmul, and chanderi silks that stay feather-light, soft on skin, and vibrant after multiple washes.',
+      title: 'Curated Breathable Fabrics',
+      desc: 'Handpicked mulmul, cambric cotton, chanderi silks, and soft festive blends designed for all-day comfort and royal elegance.',
     },
     {
       icon: Truck,
